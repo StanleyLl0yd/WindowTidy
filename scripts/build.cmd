@@ -17,7 +17,7 @@ if not exist "build\x64" mkdir "build\x64"
 if errorlevel 1 exit /b 1
 
 echo Building Window Tidy...
-cl /nologo /std:c++20 /W4 /WX /EHsc /utf-8 /DUNICODE /D_UNICODE /DWIN32_LEAN_AND_MEAN /DNOMINMAX /O2 /MT /Iinclude /c src\main.cpp /Fo"build\x64\main.obj"
+cl /nologo /std:c++20 /W4 /WX /EHsc /utf-8 /DUNICODE /D_UNICODE /DWIN32_LEAN_AND_MEAN /DNOMINMAX /O2 /MT /analyze /Iinclude /c src\main.cpp /Fo"build\x64\main.obj"
 if errorlevel 1 exit /b 1
 rc /nologo /fo "build\x64\WindowTidy.res" "res\WindowTidy.rc"
 if errorlevel 1 exit /b 1

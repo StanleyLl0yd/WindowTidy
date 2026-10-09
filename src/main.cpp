@@ -390,6 +390,12 @@ void TrayMenu() {
     AppendMenuW(menu, MF_SEPARATOR, 0, nullptr);
     AppendMenuW(menu, MF_STRING, ID_TRAY_EXIT, L"Exit");
     if (g_tidied.empty()) EnableMenuItem(menu, ID_TRAY_UNDO, MF_BYCOMMAND | MF_GRAYED);
+    if (!g_trayTarget) {
+        for (const UINT command : {ID_TRAY_TIDY, ID_TRAY_TOPMOST, ID_TRAY_NEXT,
+                                   ID_TRAY_PREV, ID_TRAY_MINIMIZE}) {
+            EnableMenuItem(menu, command, MF_BYCOMMAND | MF_GRAYED);
+        }
+    }
     POINT cursor{};
     if (GetCursorPos(&cursor)) {
         SetForegroundWindow(g_window);
@@ -437,8 +443,12 @@ INT_PTR CALLBACK SettingsProc(HWND dialog, UINT message, WPARAM wparam, LPARAM) 
     }
     case WM_COMMAND: {
         const int id = LOWORD(wparam);
-        if (id >= IDC_HK_TIDY + 20 && id < IDC_HK_TIDY + 25) {
-            FillHotkeyControl(dialog, kHotkeyControls[static_cast<size_t>(id - IDC_HK_TIDY - 20)], {});
+        constexpr std::array<int, kActionCount> clearButtons{
+            IDC_CLEAR_TIDY, IDC_CLEAR_TOPMOST, IDC_CLEAR_NEXT, IDC_CLEAR_PREV, IDC_CLEAR_MINIMIZE
+        };
+        const auto clear = std::find(clearButtons.begin(), clearButtons.end(), id);
+        if (clear != clearButtons.end()) {
+            FillHotkeyControl(dialog, kHotkeyControls[static_cast<size_t>(clear - clearButtons.begin())], {});
             return TRUE;
         }
         if (id == IDCANCEL) {

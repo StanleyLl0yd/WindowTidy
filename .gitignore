@@ -1,0 +1,38 @@
+# Build outputs
+/build/
+/bin/
+/obj/
+/out/
+/dist/
+/artifacts/
+/test-results/
+/coverage/
+
+# Native compiler/linker artifacts
+*.exe
+*.dll
+*.obj
+*.pdb
+*.ilk
+*.idb
+*.pch
+*.ipch
+*.tlog
+*.lastbuildstate
+*.res
+*.exp
+*.lib
+*.aps
+
+# User and machine state
+.vs/
+.vscode/
+.idea/
+*.user
+*.suo
+*.log
+*.tmp
+*.bak
+*~
+Thumbs.db
+Desktop.ini

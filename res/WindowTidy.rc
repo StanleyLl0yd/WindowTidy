@@ -1,0 +1,43 @@
+#include <windows.h>
+#include <commctrl.h>
+#include "resource.h"
+
+LANGUAGE LANG_ENGLISH, SUBLANG_ENGLISH_US
+1 24 "res\\WindowTidy.manifest"
+
+IDD_SETTINGS DIALOGEX 0, 0, 280, 238
+STYLE DS_SETFONT | DS_MODALFRAME | WS_POPUP | WS_CAPTION | WS_SYSMENU
+CAPTION "Window Tidy Settings"
+FONT 9, "Segoe UI"
+BEGIN
+    GROUPBOX        "Global hotkeys", -1, 8, 8, 264, 98
+    LTEXT           "Tidy / Undo:", -1, 16, 24, 94, 12
+    CONTROL         "", IDC_HK_TIDY, "msctls_hotkey32", WS_TABSTOP, 122, 22, 126, 14
+    PUSHBUTTON      "X", IDC_CLEAR_TIDY, 251, 22, 15, 14
+    LTEXT           "Always on top:", -1, 16, 39, 94, 12
+    CONTROL         "", IDC_HK_TOPMOST, "msctls_hotkey32", WS_TABSTOP, 122, 37, 126, 14
+    PUSHBUTTON      "X", IDC_CLEAR_TOPMOST, 251, 37, 15, 14
+    LTEXT           "Move to next monitor:", -1, 16, 54, 100, 12
+    CONTROL         "", IDC_HK_NEXT, "msctls_hotkey32", WS_TABSTOP, 122, 52, 126, 14
+    PUSHBUTTON      "X", IDC_CLEAR_NEXT, 251, 52, 15, 14
+    LTEXT           "Move to previous:", -1, 16, 69, 100, 12
+    CONTROL         "", IDC_HK_PREV, "msctls_hotkey32", WS_TABSTOP, 122, 67, 126, 14
+    PUSHBUTTON      "X", IDC_CLEAR_PREV, 251, 67, 15, 14
+    LTEXT           "Minimize active:", -1, 16, 84, 100, 12
+    CONTROL         "", IDC_HK_MINIMIZE, "msctls_hotkey32", WS_TABSTOP, 122, 82, 126, 14
+    PUSHBUTTON      "X", IDC_CLEAR_MINIMIZE, 251, 82, 15, 14
+
+    GROUPBOX        "Behavior", -1, 8, 110, 264, 84
+    CONTROL         "Skip always-on-top windows in Tidy", IDC_SKIP_TOPMOST, "Button",
+                    BS_AUTOCHECKBOX | WS_TABSTOP, 16, 123, 246, 12
+    CONTROL         "Tidy only on current monitor", IDC_ONLY_CURRENT, "Button",
+                    BS_AUTOCHECKBOX | WS_TABSTOP, 16, 139, 246, 12
+    LTEXT           "Move mode:", -1, 16, 156, 100, 12
+    COMBOBOX        IDC_MOVE_MODE, 122, 153, 136, 76, CBS_DROPDOWNLIST | WS_TABSTOP | WS_VSCROLL
+    CONTROL         "Start with Windows", IDC_RUN_AT_STARTUP, "Button",
+                    BS_AUTOCHECKBOX | WS_TABSTOP, 16, 176, 246, 12
+
+    LTEXT           "Click X to disable a hotkey.", IDC_HOTKEY_HELP, 12, 200, 250, 12
+    DEFPUSHBUTTON   "Save", IDOK, 160, 217, 50, 14
+    PUSHBUTTON      "Cancel", IDCANCEL, 219, 217, 50, 14
+END

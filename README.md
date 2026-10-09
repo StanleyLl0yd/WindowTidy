@@ -22,7 +22,9 @@ A lightweight, portable Windows desktop window manager written in native C++20 a
 | Previous monitor | Ctrl+Alt+Left |
 | Minimize active | Alt+H |
 
-Shortcuts are registered with Windows. If a shortcut is already owned by another app, Window Tidy reports the collision instead of intercepting or injecting keyboard input.
+Shortcuts are registered with Windows. If a shortcut is already owned by another app, Window Tidy reports the collision and keeps other, available shortcuts working. It does not intercept or inject keyboard input.
+
+If Windows has already taken focus when you open the tray menu, window-specific actions are disabled rather than risking a change to an unrelated window. Use a global shortcut while the intended window is active.
 
 ## Requirements
 
@@ -48,7 +50,7 @@ GitHub Actions builds and tests on a Windows runner; successful runs publish a d
 
 ## Configuration
 
-`HKCU\Software\WindowTidy` stores editable hotkeys and Tidy/Move options as `REG_DWORD`. Autostart is determined exclusively from the non-empty `HKCU\Software\Microsoft\Windows\CurrentVersion\Run\WindowTidy` registry value; there is no duplicate autostart setting.
+`HKCU\Software\WindowTidy` stores editable hotkeys and Tidy/Move options as `REG_DWORD`. Autostart is determined exclusively from a non-empty `REG_SZ` or `REG_EXPAND_SZ` value at `HKCU\Software\Microsoft\Windows\CurrentVersion\Run\WindowTidy`; there is no duplicate autostart setting.
 
 Hotkeys and settings are per-user. Window Tidy does not require administrator privileges, but Windows may restrict manipulating higher-integrity, protected, or otherwise special windows.
 

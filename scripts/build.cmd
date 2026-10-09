@@ -17,7 +17,7 @@ if not exist "build\x64" mkdir "build\x64"
 if errorlevel 1 exit /b 1
 
 echo Building Window Tidy...
-cl /nologo /std:c++20 /W4 /WX /EHsc /utf-8 /DUNICODE /D_UNICODE /DWIN32_LEAN_AND_MEAN /DNOMINMAX /O2 /MT /Iinclude /c src\main.cpp /Fo"build\x64\main.obj"
+cl /nologo /std:c++20 /W4 /WX /EHsc /utf-8 /DUNICODE /D_UNICODE /DWIN32_LEAN_AND_MEAN /DNOMINMAX /O2 /MT /analyze /Iinclude /c src\main.cpp /Fo"build\x64\main.obj"
 if errorlevel 1 exit /b 1
 rc /nologo /fo "build\x64\WindowTidy.res" "res\WindowTidy.rc"
 if errorlevel 1 exit /b 1
@@ -30,6 +30,12 @@ cl /nologo /std:c++20 /W4 /WX /EHsc /utf-8 /DUNICODE /D_UNICODE /DWIN32_LEAN_AND
 if errorlevel 1 exit /b 1
 echo Running tests...
 "build\x64\logic_tests.exe"
+if errorlevel 1 exit /b 1
+echo Building hotkey integration test...
+cl /nologo /std:c++20 /W4 /WX /EHsc /utf-8 /DUNICODE /D_UNICODE /DWIN32_LEAN_AND_MEAN /DNOMINMAX /O2 /MT tests\hotkey_registration_tests.cpp /Fe:"build\x64\hotkey_registration_tests.exe" /Fo:"build\x64\hotkey_registration_tests.obj" user32.lib
+if errorlevel 1 exit /b 1
+echo Running hotkey integration test...
+"build\x64\hotkey_registration_tests.exe" "build\x64\WindowTidy.exe"
 if errorlevel 1 exit /b 1
 :done
 echo Build completed.

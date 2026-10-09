@@ -1,7 +1,6 @@
 #pragma once
 #include <windows.h>
 #include <array>
-#include <cstdint>
 
 namespace wt {
 struct Hotkey {
@@ -25,6 +24,9 @@ constexpr bool ValidHotkey(Hotkey hotkey) noexcept {
     if ((hotkey.mods & kAllowed) == 0 || (hotkey.mods & ~kAllowed) != 0) return false;
     if (hotkey.vk > 0xffu) return false;
     if (hotkey.vk == VK_SHIFT || hotkey.vk == VK_CONTROL || hotkey.vk == VK_MENU ||
+        hotkey.vk == VK_LSHIFT || hotkey.vk == VK_RSHIFT ||
+        hotkey.vk == VK_LCONTROL || hotkey.vk == VK_RCONTROL ||
+        hotkey.vk == VK_LMENU || hotkey.vk == VK_RMENU ||
         hotkey.vk == VK_LWIN || hotkey.vk == VK_RWIN) return false;
     return true;
 }

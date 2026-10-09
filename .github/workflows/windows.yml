@@ -24,13 +24,12 @@ jobs:
           call scripts\build.cmd test
           if errorlevel 1 exit /b 1
       - name: Verify portable executable dependencies
-        shell: pwsh
+        shell: cmd
         run: |
-          $imports = & dumpbin.exe /dependents "build/x64/WindowTidy.exe"
-          if ($LASTEXITCODE -ne 0) { throw "dumpbin failed" }
-          $bad = $imports | Select-String -Pattern '(?i)(vcruntime[0-9_]*|msvcp[0-9_]*|ucrtbase|api-ms-win-crt)[\w.-]*\.dll'
-          if ($bad) { throw "Unexpected dynamic C/C++ runtime: $bad" }
-          $imports | Select-String -Pattern '\.dll' | ForEach-Object { Write-Host $_.Line.Trim() }
+          call "%ProgramFiles%\Microsoft Visual Studio\2022\Enterprise\VC\Auxiliary\Build\vcvars64.bat"
+          if errorlevel 1 exit /b 1
+          pwsh -NoProfile -File scripts\verify_pe.ps1
+          if errorlevel 1 exit /b 1
       - name: SHA-256
         shell: pwsh
         run: |

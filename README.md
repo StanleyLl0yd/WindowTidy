@@ -50,7 +50,7 @@ GitHub Actions builds and tests on a Windows runner; successful runs publish a d
 
 ## Configuration
 
-`HKCU\Software\WindowTidy` stores editable hotkeys and Tidy/Move options as `REG_DWORD`. Autostart is determined exclusively from the non-empty `HKCU\Software\Microsoft\Windows\CurrentVersion\Run\WindowTidy` registry value; there is no duplicate autostart setting.
+`HKCU\Software\WindowTidy` stores editable hotkeys and Tidy/Move options as `REG_DWORD`. Autostart is determined exclusively from a non-empty `REG_SZ` or `REG_EXPAND_SZ` value at `HKCU\Software\Microsoft\Windows\CurrentVersion\Run\WindowTidy`; there is no duplicate autostart setting.
 
 Hotkeys and settings are per-user. Window Tidy does not require administrator privileges, but Windows may restrict manipulating higher-integrity, protected, or otherwise special windows.
 

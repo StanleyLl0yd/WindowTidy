@@ -141,12 +141,13 @@ std::wstring ExecutablePath() {
 
 bool StartupEnabled() {
     DWORD bytes = 0;
-    if (RegGetValueW(HKEY_CURRENT_USER, kRunKey, kRunValue, RRF_RT_REG_SZ,
+    constexpr DWORD typeFlags = RRF_RT_REG_SZ | RRF_RT_REG_EXPAND_SZ | RRF_NOEXPAND;
+    if (RegGetValueW(HKEY_CURRENT_USER, kRunKey, kRunValue, typeFlags,
                      nullptr, nullptr, &bytes) != ERROR_SUCCESS ||
         bytes < sizeof(wchar_t) || bytes > 65536) return false;
 
     std::vector<wchar_t> value(bytes / sizeof(wchar_t) + 1, L'\0');
-    return RegGetValueW(HKEY_CURRENT_USER, kRunKey, kRunValue, RRF_RT_REG_SZ,
+    return RegGetValueW(HKEY_CURRENT_USER, kRunKey, kRunValue, typeFlags,
                         nullptr, value.data(), &bytes) == ERROR_SUCCESS &&
            value.front() != L'\0';
 }

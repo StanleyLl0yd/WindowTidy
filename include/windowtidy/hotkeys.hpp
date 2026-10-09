@@ -1,7 +1,6 @@
 #pragma once
 #include <windows.h>
 #include <array>
-#include <cstdint>
 
 namespace wt {
 struct Hotkey {

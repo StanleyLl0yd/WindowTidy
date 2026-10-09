@@ -24,7 +24,7 @@
 - [ ] Real-desktop tests for mixed scaling, multiple taskbar positions, portrait displays and hot-plug.
 - [ ] Check taskbar/tray focus edge cases and owned/modal windows ([#3](https://github.com/StanleyLl0yd/WindowTidy/issues/3)).
 - [ ] Accessibility and keyboard-only Settings workflow.
-- [ ] Recover notification-area icon after Explorer restarts.
+- [x] Implement retry-based recovery of the notification icon after Explorer restarts (interactive acceptance remains in #2).
 - [ ] Verify elevated / protected / UWP window behavior.
 - [ ] Improve diagnostic feedback without writing local log files.
 

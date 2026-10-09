@@ -1,7 +1,6 @@
 #include "windowtidy/geometry.hpp"
 #include "windowtidy/hotkeys.hpp"
 #include <cassert>
-#include <array>
 #include <cstdio>
 
 int main() {

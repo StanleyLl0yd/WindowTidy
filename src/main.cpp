@@ -48,7 +48,7 @@ struct TidyEntry {
 struct TidyContext {
     HWND exemptRoot{};
     HMONITOR currentMonitor{};
-    Settings settings{};
+    const Settings& settings;
 };
 struct Monitor {
     HMONITOR handle{};
@@ -359,7 +359,8 @@ bool AddTray() {
     g_tray.uCallbackMessage = WM_TRAYICON;
     g_tray.hIcon = LoadIconW(nullptr, IDI_APPLICATION);
     wcscpy_s(g_tray.szTip, L"Window Tidy");
-    g_trayAdded = Shell_NotifyIconW(NIM_ADD, &g_tray) != FALSE;
+    g_trayAdded = Shell_NotifyIconW(NIM_ADD, &g_tray) != FALSE ||
+                  Shell_NotifyIconW(NIM_MODIFY, &g_tray) != FALSE;
     return g_trayAdded;
 }
 

@@ -22,7 +22,9 @@ A lightweight, portable Windows desktop window manager written in native C++20 a
 | Previous monitor | Ctrl+Alt+Left |
 | Minimize active | Alt+H |
 
-Shortcuts are registered with Windows. If a shortcut is already owned by another app, Window Tidy reports the collision instead of intercepting or injecting keyboard input.
+Shortcuts are registered with Windows. If a shortcut is already owned by another app, Window Tidy reports the collision and keeps other, available shortcuts working. It does not intercept or inject keyboard input.
+
+If Windows has already taken focus when you open the tray menu, window-specific actions are disabled rather than risking a change to an unrelated window. Use a global shortcut while the intended window is active.
 
 ## Requirements
 

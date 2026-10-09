@@ -25,6 +25,7 @@ enum class MoveMode : DWORD { Preserve = 0, Center = 1, Maximize = 2 };
 enum HotkeyIndex : size_t { Tidy = 0, Topmost = 1, Next = 2, Previous = 3, Minimize = 4 };
 constexpr size_t kActionCount = 5;
 constexpr int kHotkeyBaseId = 100;
+constexpr UINT_PTR kTrayRetryTimer = 1;
 
 struct Settings {
     bool skipTopmost = true;
@@ -62,7 +63,6 @@ UINT g_taskbarCreated{};
 NOTIFYICONDATAW g_tray{};
 bool g_trayAdded = false;
 bool g_settingsDialogOpen = false;
-bool g_tidyActive = false;
 HWND g_trayTarget{};
 Settings g_settings{};
 std::vector<TidyEntry> g_tidied;
@@ -199,20 +199,24 @@ HWND ActiveWindow() {
     return window;
 }
 
-bool RegisterHotkeys(const Settings& settings, size_t* badIndex = nullptr) {
+bool RegisterHotkeys(const Settings& settings, size_t* badIndex = nullptr, bool keepSuccessful = false) {
+    bool allRegistered = true;
     for (size_t i = 0; i < kActionCount; ++i) {
         if (settings.shortcuts[i].vk == 0) continue;
         const auto hotkey = settings.shortcuts[i];
         if (!RegisterHotKey(g_window, kHotkeyBaseId + static_cast<int>(i),
                             hotkey.mods | MOD_NOREPEAT, hotkey.vk)) {
-            if (badIndex) *badIndex = i;
-            for (size_t j = 0; j < i; ++j) {
-                UnregisterHotKey(g_window, kHotkeyBaseId + static_cast<int>(j));
+            if (allRegistered && badIndex) *badIndex = i;
+            allRegistered = false;
+            if (!keepSuccessful) {
+                for (size_t j = 0; j < i; ++j) {
+                    UnregisterHotKey(g_window, kHotkeyBaseId + static_cast<int>(j));
+                }
+                return false;
             }
-            return false;
         }
     }
-    return true;
+    return allRegistered;
 }
 
 void UnregisterHotkeys() {
@@ -252,7 +256,6 @@ void DoTidy(HWND target) {
     g_tidied.clear();
     const TidyContext context{root, MonitorFromWindow(target, MONITOR_DEFAULTTONEAREST), g_settings};
     EnumWindows(EnumerateTidy, reinterpret_cast<LPARAM>(&context));
-    g_tidyActive = !g_tidied.empty();
 }
 
 void UndoTidy() {
@@ -264,11 +267,10 @@ void UndoTidy() {
         ShowWindow(entry.hwnd, entry.maximized ? SW_SHOWMAXIMIZED : SW_RESTORE);
     }
     g_tidied.clear();
-    g_tidyActive = false;
 }
 
 void ToggleTidy(HWND target) {
-    if (g_tidyActive) UndoTidy();
+    if (!g_tidied.empty()) UndoTidy();
     else DoTidy(target);
 }
 
@@ -356,7 +358,13 @@ bool AddTray() {
     return g_trayAdded;
 }
 
+void EnsureTray() {
+    if (AddTray()) KillTimer(g_window, kTrayRetryTimer);
+    else SetTimer(g_window, kTrayRetryTimer, 2000, nullptr);
+}
+
 void RemoveTray() {
+    KillTimer(g_window, kTrayRetryTimer);
     if (g_trayAdded) Shell_NotifyIconW(NIM_DELETE, &g_tray);
     g_trayAdded = false;
 }
@@ -381,7 +389,7 @@ void TrayMenu() {
                 ID_TRAY_STARTUP, L"Start with Windows");
     AppendMenuW(menu, MF_SEPARATOR, 0, nullptr);
     AppendMenuW(menu, MF_STRING, ID_TRAY_EXIT, L"Exit");
-    if (!g_tidyActive) EnableMenuItem(menu, ID_TRAY_UNDO, MF_BYCOMMAND | MF_GRAYED);
+    if (g_tidied.empty()) EnableMenuItem(menu, ID_TRAY_UNDO, MF_BYCOMMAND | MF_GRAYED);
     POINT cursor{};
     if (GetCursorPos(&cursor)) {
         SetForegroundWindow(g_window);
@@ -499,10 +507,13 @@ void DispatchAction(HotkeyIndex action, HWND target) {
 LRESULT CALLBACK WindowProc(HWND window, UINT message, WPARAM wparam, LPARAM lparam) {
     if (g_taskbarCreated != 0 && message == g_taskbarCreated) {
         g_trayAdded = false; // explorer.exe restarted, old icon has been discarded
-        AddTray();
+        EnsureTray();
         return 0;
     }
     switch (message) {
+    case WM_TIMER:
+        if (wparam == kTrayRetryTimer && !g_trayAdded) EnsureTray();
+        return 0;
     case WM_TRAYICON:
         if (lparam == WM_RBUTTONUP || lparam == WM_CONTEXTMENU) TrayMenu();
         else if (lparam == WM_LBUTTONDBLCLK) ShowSettings();
@@ -584,9 +595,9 @@ int WINAPI wWinMain(HINSTANCE instance, HINSTANCE, PWSTR, int) {
         CloseHandle(g_mutex);
         return 1;
     }
-    AddTray();
+    EnsureTray();
     size_t failure = 0;
-    if (!RegisterHotkeys(g_settings, &failure)) ReportHotkeyFailure(failure);
+    if (!RegisterHotkeys(g_settings, &failure, true)) ReportHotkeyFailure(failure);
     MSG message{};
     while (GetMessageW(&message, nullptr, 0, 0) > 0) {
         TranslateMessage(&message);

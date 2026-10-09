@@ -1,0 +1,36 @@
+name: Windows x64
+
+on:
+  push:
+    branches: [main, "feature/**"]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  native-build:
+    name: Build and test MSVC x64
+    runs-on: windows-2022
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build and test
+        shell: cmd
+        run: |
+          call "%ProgramFiles%\Microsoft Visual Studio\2022\Enterprise\VC\Auxiliary\Build\vcvars64.bat"
+          if errorlevel 1 exit /b 1
+          call scripts\build.cmd test
+          if errorlevel 1 exit /b 1
+      - name: SHA-256
+        shell: pwsh
+        run: |
+          Get-FileHash "build/x64/WindowTidy.exe" -Algorithm SHA256 | Format-List
+      - name: Publish unsigned Windows executable
+        uses: actions/upload-artifact@v4
+        with:
+          name: WindowTidy-Windows-x64
+          path: build/x64/WindowTidy.exe
+          if-no-files-found: error
+          retention-days: 14

@@ -12,17 +12,17 @@
 ## M0: Foundation / v0.1.0
 
 - [x] Create repository and initial documentation.
-- [ ] Native tray application, single instance and safe lifecycle.
-- [ ] Tidy/Undo, Topmost, Move between monitors, Minimize active.
-- [ ] Native Settings, hotkey collision handling, HKCU persistence and autostart.
-- [ ] Command-line MSVC build and Windows CI logic tests.
-- [ ] CI build passing with downloadable executable.
-- [ ] Review code and complete Windows GUI acceptance before tagging a release.
+- [x] Native tray application, single instance and safe lifecycle.
+- [x] Tidy/Undo, Topmost, Move between monitors, Minimize active.
+- [x] Native Settings, hotkey collision handling, HKCU persistence and autostart.
+- [x] Command-line MSVC build and Windows CI logic tests.
+- [x] CI build passing with downloadable executable, embedded manifest and portable-runtime checks.
+- [ ] Complete interactive Windows GUI acceptance ([#2](https://github.com/StanleyLl0yd/WindowTidy/issues/2)) and address its findings before tagging a release.
 
 ## M1: Reliability
 
 - [ ] Real-desktop tests for mixed scaling, multiple taskbar positions, portrait displays and hot-plug.
-- [ ] Check taskbar/tray focus edge cases and owned/modal windows.
+- [ ] Check taskbar/tray focus edge cases and owned/modal windows ([#3](https://github.com/StanleyLl0yd/WindowTidy/issues/3)).
 - [ ] Accessibility and keyboard-only Settings workflow.
 - [ ] Recover notification-area icon after Explorer restarts.
 - [ ] Verify elevated / protected / UWP window behavior.

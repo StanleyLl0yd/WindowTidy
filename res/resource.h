@@ -40,3 +40,4 @@
 #define ID_TRAY_STARTUP           40008
 #define ID_TRAY_EXIT              40009
 #define ID_TRAY_DIAGNOSTICS       40010
+#define ID_TRAY_TARGET_BASE       42000

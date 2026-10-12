@@ -500,12 +500,32 @@ wt::Hotkey ReadHotkeyControl(HWND dialog, int id) {
 INT_PTR CALLBACK SettingsProc(HWND dialog, UINT message, WPARAM wparam, LPARAM) {
     switch (message) {
     case WM_INITDIALOG: {
+        SetWindowTextW(dialog, Tr(wt::TextId::SettingsTitle));
+        constexpr std::array<std::pair<int, wt::TextId>, 14> labels{{
+            {IDC_TXT_GLOBAL, wt::TextId::GlobalHotkeys},
+            {IDC_TXT_TIDY, wt::TextId::TidyLabel},
+            {IDC_TXT_TOPMOST, wt::TextId::TopmostLabel},
+            {IDC_TXT_NEXT, wt::TextId::NextLabel},
+            {IDC_TXT_PREV, wt::TextId::PreviousLabel},
+            {IDC_TXT_MINIMIZE, wt::TextId::MinimizeLabel},
+            {IDC_TXT_BEHAVIOR, wt::TextId::Behavior},
+            {IDC_SKIP_TOPMOST, wt::TextId::SkipTopmost},
+            {IDC_ONLY_CURRENT, wt::TextId::OnlyCurrent},
+            {IDC_TXT_MOVE_MODE, wt::TextId::MoveModeLabel},
+            {IDC_RUN_AT_STARTUP, wt::TextId::RunAtStartup},
+            {IDC_HOTKEY_HELP, wt::TextId::HotkeyHelp},
+            {IDOK, wt::TextId::Save},
+            {IDCANCEL, wt::TextId::Cancel}
+        }};
+        for (const auto& [control, text] : labels) {
+            SetDlgItemTextW(dialog, control, Tr(text));
+        }
         CheckDlgButton(dialog, IDC_SKIP_TOPMOST, g_settings.skipTopmost ? BST_CHECKED : BST_UNCHECKED);
         CheckDlgButton(dialog, IDC_ONLY_CURRENT, g_settings.onlyCurrentMonitor ? BST_CHECKED : BST_UNCHECKED);
         HWND combo = GetDlgItem(dialog, IDC_MOVE_MODE);
-        SendMessageW(combo, CB_ADDSTRING, 0, reinterpret_cast<LPARAM>(L"Preserve relative position"));
-        SendMessageW(combo, CB_ADDSTRING, 0, reinterpret_cast<LPARAM>(L"Center on destination"));
-        SendMessageW(combo, CB_ADDSTRING, 0, reinterpret_cast<LPARAM>(L"Move and maximize"));
+        SendMessageW(combo, CB_ADDSTRING, 0, reinterpret_cast<LPARAM>(Tr(wt::TextId::Preserve)));
+        SendMessageW(combo, CB_ADDSTRING, 0, reinterpret_cast<LPARAM>(Tr(wt::TextId::Center)));
+        SendMessageW(combo, CB_ADDSTRING, 0, reinterpret_cast<LPARAM>(Tr(wt::TextId::Maximize)));
         SendMessageW(combo, CB_SETCURSEL, static_cast<WPARAM>(g_settings.moveMode), 0);
         CheckDlgButton(dialog, IDC_RUN_AT_STARTUP, StartupEnabled() ? BST_CHECKED : BST_UNCHECKED);
         for (size_t i = 0; i < kActionCount; ++i) {
@@ -537,7 +557,7 @@ INT_PTR CALLBACK SettingsProc(HWND dialog, UINT message, WPARAM wparam, LPARAM) 
                 draft.shortcuts[i] = ReadHotkeyControl(dialog, kHotkeyControls[i]);
             }
             if (!wt::UniqueHotkeys(draft.shortcuts)) {
-                Warn(L"Shortcuts must be unique. Each enabled shortcut must include Ctrl, Alt or Shift.", dialog);
+                Warn(Tr(wt::TextId::WarnBadHotkey), dialog);
                 return TRUE;
             }
             size_t failure = 0;
@@ -547,12 +567,12 @@ INT_PTR CALLBACK SettingsProc(HWND dialog, UINT message, WPARAM wparam, LPARAM) 
             }
             UnregisterHotkeys();
             if (!SaveSettings(draft)) {
-                Warn(L"Could not save all settings to the current user's registry.", dialog);
+                Warn(Tr(wt::TextId::WarnCannotSave), dialog);
                 return TRUE;
             }
             const bool autostart = IsDlgButtonChecked(dialog, IDC_RUN_AT_STARTUP) == BST_CHECKED;
             if (autostart != StartupEnabled() && !SetStartup(autostart)) {
-                Warn(L"Could not update the Windows startup registry value.", dialog);
+                Warn(Tr(wt::TextId::WarnCannotAutostart), dialog);
                 return TRUE;
             }
             g_settings = draft;

@@ -44,6 +44,13 @@ Record each case as **PASS**, **FAIL**, or **BLOCKED** for **each OS**. For FAIL
 | A20 | Run on a Windows account with Russian display language; reopen the EXE on English, German or another non-Russian display-language account. | Tray and settings are in Russian only for Russian Windows UI. Otherwise English; no mixed untranslated labels, broken Cyrillic or clipped text. Changing input keyboard layout alone does not change UI language. |
 | A21 | Use tray **Hotkey diagnostics...**, press every shortcut in a normal app, and compare effects and registration statuses. Arrange a conflict for a shortcut, restart and repeat. | Each active binding reports registered; conflicts report unavailable with Win32 code; disabled bindings report disabled. Other independent hotkeys still respond. If all keys register but do nothing, record the target app, exact shortcut, Windows display/input languages and whether it also fails in Notepad. |
 
+## Explicit tray target picker (M1)
+
+| ID | Actions | Expected outcome |
+| --- | --- | --- |
+| A22 | Open an ordinary titled window, right-click Window Tidy in the tray when Explorer has focus, open **Choose target window...**, then choose the intended window and an action. Repeat after closing or hiding that target, and test with two similarly titled windows. | Targeted operation affects only the explicitly selected still-eligible window. If its HWND/PID/thread changes or it is no longer eligible, the operation is safely ignored. No application other than the selected target is manipulated. The original direct commands remain safely unavailable when no foreground target can be proven. |
+| A23 | Inspect the picker with many open windows, a modal dialogue, Windows Terminal, an elevated window, and a window with no title. Also test keyboard-only menu navigation. | The picker lists a bounded, on-demand set of titled visible windows without stale entries; nonstandard or inaccessible windows do not hang/crash the tray or redirect operations. Document any omitted or unsupported window type instead of marking it PASS automatically. |
+
 ## Post-test and release decision
 
 - Restore the original hotkeys, Tidy settings and exact autostart Run value, or delete test settings when using a disposable account. Exit Window Tidy.

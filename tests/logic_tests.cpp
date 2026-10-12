@@ -1,11 +1,15 @@
 #include "windowtidy/geometry.hpp"
 #include "windowtidy/hotkeys.hpp"
 #include "windowtidy/localization.hpp"
+#include "windowtidy/menu_title.hpp"
 #include <cassert>
 #include <cstdio>
 
 int main() {
     using namespace wt;
+    assert(SafeMenuLabel(L"Notes & tasks") == L"Notes && tasks");
+    assert(SafeMenuLabel(L"Title\tCtrl+K\n") == L"Title Ctrl+K ");
+    assert(SafeMenuLabel(L"") == L"");
     static_assert(LanguageForUiLang(MAKELANGID(LANG_RUSSIAN, SUBLANG_DEFAULT)) == Language::Russian);
     static_assert(LanguageForUiLang(MAKELANGID(LANG_ENGLISH, SUBLANG_ENGLISH_US)) == Language::English);
     static_assert(LanguageForUiLang(MAKELANGID(LANG_GERMAN, SUBLANG_GERMAN)) == Language::English);

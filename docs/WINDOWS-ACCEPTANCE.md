@@ -37,6 +37,13 @@ Record each case as **PASS**, **FAIL**, or **BLOCKED** for **each OS**. For FAIL
 | A18 | Inspect process properties and relevant OS tools for unexpected elevation, additional processes, services, drivers and outbound network traffic. | User-level application, no service/driver installation or unexpected network activity. Note that absence of observed traffic during a short test is limited evidence. |
 | A19 | Close Settings via Cancel, reopen, make changes and Save, then restart the EXE. | Cancel discards edits; saved settings persist per user under HKCU and survive process restart. |
 
+## Additional checks for the localized hotkey diagnostics build
+
+| ID | Actions | Expected outcome |
+| --- | --- | --- |
+| A20 | Run on a Windows account with Russian display language; reopen the EXE on English, German or another non-Russian display-language account. | Tray and settings are in Russian only for Russian Windows UI. Otherwise English; no mixed untranslated labels, broken Cyrillic or clipped text. Changing input keyboard layout alone does not change UI language. |
+| A21 | Use tray **Hotkey diagnostics...**, press every shortcut in a normal app, and compare effects and registration statuses. Arrange a conflict for a shortcut, restart and repeat. | Each active binding reports registered; conflicts report unavailable with Win32 code; disabled bindings report disabled. Other independent hotkeys still respond. If all keys register but do nothing, record the target app, exact shortcut, Windows display/input languages and whether it also fails in Notepad. |
+
 ## Post-test and release decision
 
 - Restore the original hotkeys, Tidy settings and exact autostart Run value, or delete test settings when using a disposable account. Exit Window Tidy.

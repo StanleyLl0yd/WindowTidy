@@ -13,6 +13,7 @@
 #include "windowtidy/geometry.hpp"
 #include "windowtidy/hotkeys.hpp"
 #include "windowtidy/localization.hpp"
+#include "windowtidy/menu_title.hpp"
 #include "../res/resource.h"
 
 namespace {
@@ -525,8 +526,9 @@ void TrayMenu() {
                 const UINT id = ID_TRAY_TARGET_BASE + static_cast<UINT>(i * kActionCount + action);
                 AppendMenuW(actionsMenu, MF_STRING, id, Tr(actions[action]));
             }
+            const std::wstring label = wt::SafeMenuLabel(targets[i].title);
             if (!AppendMenuW(chooseWindow, MF_POPUP,
-                             reinterpret_cast<UINT_PTR>(actionsMenu), targets[i].title.c_str())) {
+                             reinterpret_cast<UINT_PTR>(actionsMenu), label.c_str())) {
                 DestroyMenu(actionsMenu);
             }
         }

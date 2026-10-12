@@ -13,19 +13,19 @@ FONT 9, "Segoe UI"
 BEGIN
     GROUPBOX        "Global hotkeys", IDC_TXT_GLOBAL, 8, 8, 344, 98
     LTEXT           "Tidy / Undo:", IDC_TXT_TIDY, 16, 24, 136, 12
-    CONTROL         "", IDC_HK_TIDY, "msctls_hotkey32", WS_TABSTOP, 160, 22, 180, 14
+    CONTROL         "", IDC_HK_TIDY, "msctls_hotkey32", WS_TABSTOP, 160, 22, 162, 14
     PUSHBUTTON      "X", IDC_CLEAR_TIDY, 330, 22, 15, 14
     LTEXT           "Always on top:", IDC_TXT_TOPMOST, 16, 39, 136, 12
-    CONTROL         "", IDC_HK_TOPMOST, "msctls_hotkey32", WS_TABSTOP, 160, 37, 180, 14
+    CONTROL         "", IDC_HK_TOPMOST, "msctls_hotkey32", WS_TABSTOP, 160, 37, 162, 14
     PUSHBUTTON      "X", IDC_CLEAR_TOPMOST, 330, 37, 15, 14
     LTEXT           "Move to next monitor:", IDC_TXT_NEXT, 16, 54, 136, 12
-    CONTROL         "", IDC_HK_NEXT, "msctls_hotkey32", WS_TABSTOP, 160, 52, 180, 14
+    CONTROL         "", IDC_HK_NEXT, "msctls_hotkey32", WS_TABSTOP, 160, 52, 162, 14
     PUSHBUTTON      "X", IDC_CLEAR_NEXT, 330, 52, 15, 14
     LTEXT           "Move to previous:", IDC_TXT_PREV, 16, 69, 136, 12
-    CONTROL         "", IDC_HK_PREV, "msctls_hotkey32", WS_TABSTOP, 160, 67, 180, 14
+    CONTROL         "", IDC_HK_PREV, "msctls_hotkey32", WS_TABSTOP, 160, 67, 162, 14
     PUSHBUTTON      "X", IDC_CLEAR_PREV, 330, 67, 15, 14
     LTEXT           "Minimize active:", IDC_TXT_MINIMIZE, 16, 84, 136, 12
-    CONTROL         "", IDC_HK_MINIMIZE, "msctls_hotkey32", WS_TABSTOP, 160, 82, 180, 14
+    CONTROL         "", IDC_HK_MINIMIZE, "msctls_hotkey32", WS_TABSTOP, 160, 82, 162, 14
     PUSHBUTTON      "X", IDC_CLEAR_MINIMIZE, 330, 82, 15, 14
 
     GROUPBOX        "Behavior", IDC_TXT_BEHAVIOR, 8, 110, 344, 84

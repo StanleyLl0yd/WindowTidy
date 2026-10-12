@@ -222,7 +222,7 @@ bool RegisterHotkeys(const Settings& settings, size_t* badIndex = nullptr, bool 
     bool allRegistered = true;
     for (size_t i = 0; i < kActionCount; ++i) {
         g_hotkeyActive[i] = false;
-        g_hotkeyErrors[i] = 0;
+        g_hotkeyErrors[i] = ERROR_SUCCESS;
         if (settings.shortcuts[i].vk == 0) continue;
         const auto hotkey = settings.shortcuts[i];
         if (RegisterHotKey(g_window, kHotkeyBaseId + static_cast<int>(i),
@@ -232,13 +232,14 @@ bool RegisterHotkeys(const Settings& settings, size_t* badIndex = nullptr, bool 
             g_hotkeyErrors[i] = GetLastError();
             if (allRegistered && badIndex) *badIndex = i;
             allRegistered = false;
-            if (!keepSuccessful) {
-                for (size_t j = 0; j < i; ++j) {
-                    if (g_hotkeyActive[j]) UnregisterHotKey(g_window, kHotkeyBaseId + static_cast<int>(j));
-                    g_hotkeyActive[j] = false;
-                }
-                return false;
-            }
+        }
+    }
+    if (!allRegistered && !keepSuccessful) {
+        // Leave all shortcuts unregistered while the settings dialog remains open.
+        // Preserve each Win32 error for the warning instead of obscuring later failures.
+        for (size_t i = 0; i < kActionCount; ++i) {
+            if (g_hotkeyActive[i]) UnregisterHotKey(g_window, kHotkeyBaseId + static_cast<int>(i));
+            g_hotkeyActive[i] = false;
         }
     }
     return allRegistered;
@@ -253,8 +254,13 @@ void UnregisterHotkeys() {
 }
 
 void ReportHotkeyFailure(size_t badIndex, HWND owner = nullptr) {
-    Warn(std::wstring(Tr(wt::TextId::WarnRegistration)) + Tr(kHotkeyNames[badIndex]) +
-         Tr(wt::TextId::WarnRegistrationDetail), owner);
+    std::wstring report = Tr(wt::TextId::WarnRegistration);
+    report += Tr(kHotkeyNames[badIndex]);
+    if (g_hotkeyErrors[badIndex] != ERROR_SUCCESS) {
+        report += L" (Win32: " + std::to_wstring(g_hotkeyErrors[badIndex]) + L")";
+    }
+    report += Tr(wt::TextId::WarnRegistrationDetail);
+    Warn(report, owner);
 }
 
 BOOL CALLBACK EnumerateTidy(HWND window, LPARAM param) {
@@ -406,6 +412,16 @@ std::wstring HotkeyName(wt::Hotkey shortcut) {
     if (shortcut.mods & MOD_SHIFT) result += L"Shift+";
     if (shortcut.vk >= 'A' && shortcut.vk <= 'Z') {
         result += static_cast<wchar_t>(shortcut.vk);
+    } else if (shortcut.vk == VK_LEFT) {
+        result += L"Left";
+    } else if (shortcut.vk == VK_RIGHT) {
+        result += L"Right";
+    } else if (shortcut.vk == VK_UP) {
+        result += L"Up";
+    } else if (shortcut.vk == VK_DOWN) {
+        result += L"Down";
+    } else if (shortcut.vk >= VK_NUMPAD0 && shortcut.vk <= VK_NUMPAD9) {
+        result += L"Num " + std::to_wstring(shortcut.vk - VK_NUMPAD0);
     } else {
         wchar_t name[64]{};
         const UINT scan = MapVirtualKeyW(shortcut.vk, MAPVK_VK_TO_VSC_EX);
@@ -431,10 +447,15 @@ void ShowHotkeyDiagnostics() {
             report += Tr(wt::TextId::DiagnosticDisabled);
         } else {
             report += HotkeyName(shortcut);
-            report += L" - ";
-            report += Tr(g_hotkeyActive[i] ? wt::TextId::DiagnosticActive :
-                         wt::TextId::DiagnosticUnavailable);
-            if (!g_hotkeyActive[i] && g_hotkeyErrors[i] != 0) {
+            report += L" (";
+            report += Tr(wt::TextId::DiagnosticVirtualKey);
+            report += L"=" + std::to_wstring(shortcut.vk) + L") - ";
+            const wt::TextId state = g_settingsDialogOpen ? wt::TextId::DiagnosticSuspended :
+                                     g_hotkeyActive[i] ? wt::TextId::DiagnosticActive :
+                                     g_hotkeyErrors[i] != ERROR_SUCCESS ? wt::TextId::DiagnosticUnavailable :
+                                     wt::TextId::DiagnosticNotRegistered;
+            report += Tr(state);
+            if (g_hotkeyErrors[i] != ERROR_SUCCESS && !g_hotkeyActive[i]) {
                 report += L" (Win32: " + std::to_wstring(g_hotkeyErrors[i]) + L")";
             }
             report += L" [";
@@ -576,13 +597,14 @@ INT_PTR CALLBACK SettingsProc(HWND dialog, UINT message, WPARAM wparam, LPARAM) 
                 ReportHotkeyFailure(failure, dialog);
                 return TRUE;
             }
-            UnregisterHotkeys();
             if (!SaveSettings(draft)) {
+                UnregisterHotkeys();
                 Warn(Tr(wt::TextId::WarnCannotSave), dialog);
                 return TRUE;
             }
             const bool autostart = IsDlgButtonChecked(dialog, IDC_RUN_AT_STARTUP) == BST_CHECKED;
             if (autostart != StartupEnabled() && !SetStartup(autostart)) {
+                UnregisterHotkeys();
                 Warn(Tr(wt::TextId::WarnCannotAutostart), dialog);
                 return TRUE;
             }
@@ -601,9 +623,14 @@ void ShowSettings() {
     if (g_settingsDialogOpen) return;
     g_settingsDialogOpen = true;
     UnregisterHotkeys();
-    DialogBoxParamW(g_instance, MAKEINTRESOURCEW(IDD_SETTINGS), g_window, SettingsProc, 0);
-    size_t failure = 0;
-    if (!RegisterHotkeys(g_settings, &failure, true)) ReportHotkeyFailure(failure);
+    const INT_PTR result = DialogBoxParamW(g_instance, MAKEINTRESOURCEW(IDD_SETTINGS),
+                                           g_window, SettingsProc, 0);
+    // Successful Save has already registered the new bindings. Re-register only
+    // after Cancel or dialog creation failure; otherwise Windows can retain stale IDs.
+    if (result != IDOK) {
+        size_t failure = 0;
+        if (!RegisterHotkeys(g_settings, &failure, true)) ReportHotkeyFailure(failure);
+    }
     g_settingsDialogOpen = false;
 }
 

@@ -1,5 +1,6 @@
 #include <windows.h>
 #include <array>
+#include "../res/resource.h"
 #include <cstdio>
 #include <string>
 
@@ -46,6 +47,64 @@ bool RunCollision(const wchar_t* path, Shortcut reserved, Shortcut expectedToWor
     const bool released = Available(expectedToWork);
     return running && independentShortcutWorks && released;
 }
+struct DialogQuery {
+    DWORD pid;
+    HWND dialog{};
+};
+
+BOOL CALLBACK FindSettingsDialog(HWND window, LPARAM context) {
+    auto& query = *reinterpret_cast<DialogQuery*>(context);
+    DWORD pid{};
+    GetWindowThreadProcessId(window, &pid);
+    if (pid == query.pid && GetDlgItem(window, IDC_HK_TIDY) != nullptr) {
+        query.dialog = window;
+        return FALSE;
+    }
+    return TRUE;
+}
+
+bool WaitForShortcut(Shortcut shortcut, bool shouldBeAvailable, unsigned timeoutMs) {
+    for (unsigned elapsed = 0; elapsed < timeoutMs; elapsed += 50) {
+        if (Available(shortcut) == shouldBeAvailable) return true;
+        Sleep(50);
+    }
+    return false;
+}
+
+HWND WaitForSettings(DWORD pid) {
+    for (unsigned elapsed = 0; elapsed < 5000; elapsed += 50) {
+        DialogQuery query{pid};
+        EnumWindows(FindSettingsDialog, reinterpret_cast<LPARAM>(&query));
+        if (query.dialog) return query.dialog;
+        Sleep(50);
+    }
+    return nullptr;
+}
+
+bool RunSettingsCycle(const wchar_t* path, Shortcut expected, bool save) {
+    if (!Available(expected)) return false;
+    std::wstring command = L"\"" + std::wstring(path) + L"\"";
+    STARTUPINFOW startup{};
+    startup.cb = sizeof(startup);
+    PROCESS_INFORMATION process{};
+    if (!CreateProcessW(path, command.data(), nullptr, nullptr, FALSE, 0,
+                        nullptr, nullptr, &startup, &process)) return false;
+    const bool initiallyReserved = WaitForShortcut(expected, false, 5000);
+    HWND mainWindow{};
+    for (unsigned elapsed = 0; elapsed < 5000 && !mainWindow; elapsed += 50) {
+        mainWindow = FindWindowW(L"WindowTidyWindow_38132E6B", nullptr);
+        if (!mainWindow) Sleep(50);
+    }
+    const bool opened = mainWindow && PostMessageW(mainWindow, WM_SHOWSETTINGS, 0, 0);
+    const HWND dialog = opened ? WaitForSettings(process.dwProcessId) : nullptr;
+    const bool suspended = dialog && WaitForShortcut(expected, true, 5000);
+    if (dialog) PostMessageW(dialog, WM_COMMAND, MAKEWPARAM(save ? IDOK : IDCANCEL, BN_CLICKED), 0);
+    const bool restored = dialog && WaitForShortcut(expected, false, 5000);
+    StopChild(process);
+    const bool released = Available(expected);
+    return initiallyReserved && suspended && restored && released;
+}
+
 } // namespace
 
 int wmain(int argc, wchar_t** argv) {
@@ -69,6 +128,16 @@ int wmain(int argc, wchar_t** argv) {
         std::fputs("FAILED: Ctrl+Alt+Z collision must preserve Alt+H\n", stderr);
         return 1;
     }
-    std::puts("Hotkey collision regressions passed in both directions");
+    if (!RunSettingsCycle(path, tidy, false)) {
+        std::fputs("FAILED: shortcut must be restored after Settings Cancel\n", stderr);
+        return 1;
+    }
+    // Save writes per-user registry settings; restrict this path to ephemeral CI desktops.
+    if (GetEnvironmentVariableW(L"CI", nullptr, 0) != 0 &&
+        !RunSettingsCycle(path, tidy, true)) {
+        std::fputs("FAILED: shortcut must remain registered after Settings Save\n", stderr);
+        return 1;
+    }
+    std::puts("Hotkey conflicts and Settings Cancel/Save lifecycle checks passed");
     return 0;
 }

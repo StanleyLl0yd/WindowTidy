@@ -24,7 +24,7 @@ A lightweight, portable Windows desktop window manager written in native C++20 a
 | Previous monitor | Ctrl+Alt+Left |
 | Minimize active | Alt+H |
 
-Shortcuts are registered with Windows. If Windows or another application prevents registration, Window Tidy keeps all other available shortcuts working. Open **Hotkey diagnostics...** in the tray menu to see each current shortcut, its registered/unavailable/disabled status and the Win32 failure code. Reassign an unavailable shortcut in **Settings...**. A registered shortcut does not imply that Windows permits the target window operation. Window Tidy does not intercept or inject keyboard input.
+Shortcuts are registered with Windows. If Windows or another application prevents registration, Window Tidy keeps all other available shortcuts working. Open **Hotkey diagnostics...** in the tray menu to see each current shortcut, whether it is registered, unregistered, unavailable (with a Win32 failure code) or disabled, the virtual-key number (VK), and how often the app received its `WM_HOTKEY` event. A shortcut is temporarily unregistered while **Settings...** is open, then restored on Cancel; successfully saved shortcuts remain registered without a second registration cycle. Reassign an unavailable shortcut in Settings. `Right/Left` and `Num 6/Num 4` are different virtual keys; check the VK number when setting up monitor moves. A registered shortcut does not imply that Windows permits the target window operation. Window Tidy does not intercept or inject keyboard input.
 
 If Windows has already taken focus when you open the tray menu, window-specific actions are disabled rather than risking a change to an unrelated window. Use a global shortcut while the intended window is active.
 

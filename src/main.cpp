@@ -60,6 +60,7 @@ HINSTANCE g_instance{};
 HWND g_window{};
 HANDLE g_mutex{};
 UINT g_taskbarCreated{};
+HICON g_smallIcon{};
 NOTIFYICONDATAW g_tray{};
 bool g_trayAdded = false;
 bool g_settingsDialogOpen = false;
@@ -358,7 +359,7 @@ bool AddTray() {
     g_tray.uID = 1;
     g_tray.uFlags = NIF_ICON | NIF_MESSAGE | NIF_TIP;
     g_tray.uCallbackMessage = WM_TRAYICON;
-    g_tray.hIcon = LoadIconW(nullptr, IDI_APPLICATION);
+    g_tray.hIcon = g_smallIcon;
     wcscpy_s(g_tray.szTip, L"Window Tidy");
     g_trayAdded = Shell_NotifyIconW(NIM_ADD, &g_tray) != FALSE ||
                   Shell_NotifyIconW(NIM_MODIFY, &g_tray) != FALSE;
@@ -592,12 +593,22 @@ int WINAPI wWinMain(_In_ HINSTANCE instance, _In_opt_ HINSTANCE, _In_ PWSTR, _In
         return 1;
     }
 
+    const HICON largeIcon = static_cast<HICON>(LoadImageW(instance, MAKEINTRESOURCEW(IDI_WINDOWTIDY),
+        IMAGE_ICON, GetSystemMetrics(SM_CXICON), GetSystemMetrics(SM_CYICON), LR_SHARED));
+    g_smallIcon = static_cast<HICON>(LoadImageW(instance, MAKEINTRESOURCEW(IDI_WINDOWTIDY),
+        IMAGE_ICON, GetSystemMetrics(SM_CXSMICON), GetSystemMetrics(SM_CYSMICON), LR_SHARED));
+    if (!largeIcon || !g_smallIcon) {
+        CloseHandle(g_mutex);
+        return 1;
+    }
+
     WNDCLASSEXW cls{};
     cls.cbSize = sizeof(cls);
     cls.hInstance = instance;
     cls.lpfnWndProc = WindowProc;
     cls.lpszClassName = kWindowClass;
-    cls.hIcon = LoadIconW(nullptr, IDI_APPLICATION);
+    cls.hIcon = largeIcon;
+    cls.hIconSm = g_smallIcon;
     cls.hCursor = LoadCursorW(nullptr, IDC_ARROW);
     if (!RegisterClassExW(&cls)) {
         CloseHandle(g_mutex);

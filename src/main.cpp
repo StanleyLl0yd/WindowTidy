@@ -7,10 +7,12 @@
 #include <array>
 #include <cwchar>
 #include <string>
+#include <utility>
 #include <vector>
 
 #include "windowtidy/geometry.hpp"
 #include "windowtidy/hotkeys.hpp"
+#include "windowtidy/localization.hpp"
 #include "../res/resource.h"
 
 namespace {
@@ -66,13 +68,21 @@ bool g_trayAdded = false;
 bool g_settingsDialogOpen = false;
 HWND g_trayTarget{};
 Settings g_settings{};
+wt::Language g_language = wt::Language::English;
+std::array<bool, kActionCount> g_hotkeyActive{};
+std::array<DWORD, kActionCount> g_hotkeyErrors{};
 std::vector<TidyEntry> g_tidied;
+
+const wchar_t* Tr(wt::TextId id) {
+    return wt::Text(id, g_language);
+}
 
 constexpr std::array<int, kActionCount> kHotkeyControls{
     IDC_HK_TIDY, IDC_HK_TOPMOST, IDC_HK_NEXT, IDC_HK_PREV, IDC_HK_MINIMIZE
 };
-constexpr std::array<const wchar_t*, kActionCount> kHotkeyNames{
-    L"Tidy", L"Always on top", L"Next monitor", L"Previous monitor", L"Minimize"
+constexpr std::array<wt::TextId, kActionCount> kHotkeyNames{
+    wt::TextId::ActionTidy, wt::TextId::ActionTopmost, wt::TextId::ActionNext,
+    wt::TextId::ActionPrevious, wt::TextId::ActionMinimize
 };
 constexpr std::array<const wchar_t*, kActionCount> kHotkeyValues{
     L"Tidy", L"Topmost", L"MoveNext", L"MovePrev", L"MinimizeActive"
@@ -209,15 +219,21 @@ HWND ActiveWindow() {
 bool RegisterHotkeys(const Settings& settings, size_t* badIndex = nullptr, bool keepSuccessful = false) {
     bool allRegistered = true;
     for (size_t i = 0; i < kActionCount; ++i) {
+        g_hotkeyActive[i] = false;
+        g_hotkeyErrors[i] = 0;
         if (settings.shortcuts[i].vk == 0) continue;
         const auto hotkey = settings.shortcuts[i];
-        if (!RegisterHotKey(g_window, kHotkeyBaseId + static_cast<int>(i),
-                            hotkey.mods | MOD_NOREPEAT, hotkey.vk)) {
+        if (RegisterHotKey(g_window, kHotkeyBaseId + static_cast<int>(i),
+                           hotkey.mods | MOD_NOREPEAT, hotkey.vk)) {
+            g_hotkeyActive[i] = true;
+        } else {
+            g_hotkeyErrors[i] = GetLastError();
             if (allRegistered && badIndex) *badIndex = i;
             allRegistered = false;
             if (!keepSuccessful) {
                 for (size_t j = 0; j < i; ++j) {
-                    UnregisterHotKey(g_window, kHotkeyBaseId + static_cast<int>(j));
+                    if (g_hotkeyActive[j]) UnregisterHotKey(g_window, kHotkeyBaseId + static_cast<int>(j));
+                    g_hotkeyActive[j] = false;
                 }
                 return false;
             }
@@ -228,13 +244,15 @@ bool RegisterHotkeys(const Settings& settings, size_t* badIndex = nullptr, bool 
 
 void UnregisterHotkeys() {
     for (size_t i = 0; i < kActionCount; ++i) {
-        UnregisterHotKey(g_window, kHotkeyBaseId + static_cast<int>(i));
+        if (g_hotkeyActive[i]) UnregisterHotKey(g_window, kHotkeyBaseId + static_cast<int>(i));
+        g_hotkeyActive[i] = false;
+        g_hotkeyErrors[i] = 0;
     }
 }
 
 void ReportHotkeyFailure(size_t badIndex, HWND owner = nullptr) {
-    Warn(std::wstring(L"Cannot register global shortcut: ") + kHotkeyNames[badIndex] +
-         L".\n\nAnother application or Windows may already use this combination.", owner);
+    Warn(std::wstring(Tr(wt::TextId::WarnRegistration)) + Tr(kHotkeyNames[badIndex]) +
+         Tr(wt::TextId::WarnRegistrationDetail), owner);
 }
 
 BOOL CALLBACK EnumerateTidy(HWND window, LPARAM param) {
@@ -578,6 +596,7 @@ LRESULT CALLBACK WindowProc(HWND window, UINT message, WPARAM wparam, LPARAM lpa
 
 int WINAPI wWinMain(_In_ HINSTANCE instance, _In_opt_ HINSTANCE, _In_ PWSTR, _In_ int) {
     g_instance = instance;
+    g_language = wt::LanguageForUiLang(GetUserDefaultUILanguage());
     g_mutex = CreateMutexW(nullptr, FALSE, kMutexName);
     if (!g_mutex) return 1;
     if (GetLastError() == ERROR_ALREADY_EXISTS) {

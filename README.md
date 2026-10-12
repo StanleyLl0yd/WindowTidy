@@ -71,9 +71,11 @@ Hotkeys and settings are per-user. Window Tidy does not require administrator pr
 - Settings use the standard Windows hotkey control (Ctrl, Alt and Shift combinations); global Win-key shortcuts are not exposed by this control.
 - UI behavior on real multi-monitor desktops still needs interactive acceptance testing; a successful CI build is not proof of those scenarios.
 
-## Versioning
+## Versioning and releases
 
 Only numerical SemVer: `MAJOR.MINOR.PATCH` (Git tags: `v0.1.0`, `v0.1.1`, ...). No prerelease suffixes.
+
+GitHub Releases provide the portable executable and a SHA256SUMS.txt file. The guarded release workflow supports manual dispatch on main and an explicit version request through `.github/release-request.txt` committed to main (two lines: `version=N.N.N` and `acceptance=limited|full`). A matching `docs/releases/vN.N.N.md` must document owner verification and the acceptance scope. The workflow rebuilds and verifies the exact release commit before publishing. A limited-acceptance release does **not** mean complete Windows 10 plus Windows 11 desktop acceptance; full A01-A21 coverage remains tracked in issue #2.
 
 ## Development
 

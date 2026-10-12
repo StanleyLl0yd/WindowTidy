@@ -1,6 +1,6 @@
-# M0 interactive Windows acceptance (v0.1.0 gate)
+# Interactive Windows 10/11 acceptance
 
-Tracking issue: [#2](https://github.com/StanleyLl0yd/WindowTidy/issues/2). This procedure records **hands-on** behavior, not CI results. Perform it separately on Windows 10 x64 and Windows 11 x64. Do not tag a release until all mandatory checks pass, or a documented owner-approved exception exists.
+Tracking issue: [#2](https://github.com/StanleyLl0yd/WindowTidy/issues/2). This procedure records **hands-on** behavior, not CI results. Perform it separately on Windows 10 x64 and Windows 11 x64. The complete A01-A21 acceptance gate requires hands-on checks on both Windows 10 and Windows 11. A release may be issued earlier only with a version-specific, documented owner-approved **limited** acceptance that explicitly discloses the missing test coverage. Keep issue #2 open until the full matrix is complete.
 
 ## Prepare a reproducible test
 
@@ -50,7 +50,7 @@ Record each case as **PASS**, **FAIL**, or **BLOCKED** for **each OS**. For FAIL
 - For a failure, file a dedicated issue with test ID, tested commit/hash, OS build, display layout, reproduction steps, expected/observed result and sanitized evidence. Retest the affected case after the fix, then rerun a general smoke pass.
 - [#3](https://github.com/StanleyLl0yd/WindowTidy/issues/3) is the follow-up for improving tray target selection and exceptional windows. The safe fallback in A14 is not proof of a complete UX solution.
 - [#4](https://github.com/StanleyLl0yd/WindowTidy/issues/4) is the owner's source-license choice. Do not infer a license from public visibility.
-- Only after issue #2 contains positive Windows 10 **and** Windows 11 evidence and identified defects are resolved should `v0.1.0` be considered. Verify the new final exact-main Windows CI before publishing an unsigned artifact as a release.
+- Full acceptance requires issue #2 to contain positive Windows 10 **and** Windows 11 evidence with identified defects resolved. Version-specific releases with explicitly documented limited device verification may be published before this full gate, provided the release notes state that the complete matrix is still open. Verify exact-main Windows CI and every release-build check before publishing.
 
 ## Acceptance result template (copy into #2)
 

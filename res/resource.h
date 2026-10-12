@@ -1,5 +1,6 @@
 #pragma once
 
+#define IDI_WINDOWTIDY           100
 #define IDD_SETTINGS              101
 #define IDC_HK_TIDY               1001
 #define IDC_HK_TOPMOST            1002

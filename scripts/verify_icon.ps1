@@ -46,7 +46,7 @@ for ($i = 0; $i -lt $count; $i++) {
     }
     $actualSizes += $size
 }
-if (($actualSizes | Sort-Object) -join ',' -ne ($expectedSizes | Sort-Object) -join ',') {
+if (($actualSizes -join ',') -ne ($expectedSizes -join ',')) {
     throw "Unexpected ICO image sizes: $($actualSizes -join ',')"
 }
 

@@ -1,10 +1,15 @@
 #include "windowtidy/geometry.hpp"
 #include "windowtidy/hotkeys.hpp"
+#include "windowtidy/localization.hpp"
 #include <cassert>
 #include <cstdio>
 
 int main() {
     using namespace wt;
+    static_assert(LanguageForUiLang(MAKELANGID(LANG_RUSSIAN, SUBLANG_DEFAULT)) == Language::Russian);
+    static_assert(LanguageForUiLang(MAKELANGID(LANG_ENGLISH, SUBLANG_ENGLISH_US)) == Language::English);
+    static_assert(LanguageForUiLang(MAKELANGID(LANG_GERMAN, SUBLANG_GERMAN)) == Language::English);
+    static_assert(Text(TextId::TrayExit, Language::Russian)[0] != Text(TextId::TrayExit, Language::English)[0]);
     static_assert(PackHotkey({MOD_ALT, 'H'}) == 0x00010048);
     static_assert(UnpackHotkey(0x0003005a) == Hotkey{MOD_CONTROL | MOD_ALT, 'Z'});
     static_assert(ValidHotkey({}));

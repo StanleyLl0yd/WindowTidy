@@ -4,10 +4,22 @@ on:
   workflow_dispatch:
     inputs:
       version:
-        description: 'Numerical version (for example 0.1.0)'
+        description: 'Numeric MAJOR.MINOR.PATCH version'
         required: true
-        default: '0.1.0'
+        default: '0.1.1'
         type: string
+      acceptance:
+        description: 'Full Windows 10/11 acceptance or documented limited device verification'
+        required: true
+        default: 'limited'
+        type: choice
+        options:
+          - limited
+          - full
+  push:
+    branches: [main]
+    paths:
+      - '.github/release-request.txt'
 
 permissions:
   contents: write
@@ -29,31 +41,70 @@ jobs:
         shell: pwsh
         env:
           GH_TOKEN: ${{ github.token }}
-          RELEASE_VERSION: ${{ inputs.version }}
+          REQUESTED_VERSION: ${{ inputs.version }}
+          REQUESTED_ACCEPTANCE: ${{ inputs.acceptance }}
         run: |
           if ($env:GITHUB_REF -ne 'refs/heads/main') {
-            throw 'Release workflow must be dispatched on main.'
+            throw 'Release must run on main.'
           }
-          if ($env:RELEASE_VERSION -cnotmatch '^\d+\.\d+\.\d+$') {
-            throw 'Version must be numerical MAJOR.MINOR.PATCH with no suffix.'
+
+          if ($env:GITHUB_EVENT_NAME -eq 'push') {
+            $request = @(Get-Content '.github/release-request.txt' -Encoding UTF8)
+            if ($request.Count -ne 2 -or
+                $request[0] -cnotmatch '^version=(\d+\.\d+\.\d+)$' -or
+                $request[1] -cnotmatch '^acceptance=(full|limited)$') {
+              throw 'Release request must contain exactly version=N.N.N and acceptance=full|limited.'
+            }
+            $version = $request[0].Substring('version='.Length)
+            $acceptance = $request[1].Substring('acceptance='.Length)
+          } elseif ($env:GITHUB_EVENT_NAME -eq 'workflow_dispatch') {
+            $version = $env:REQUESTED_VERSION
+            $acceptance = $env:REQUESTED_ACCEPTANCE
+          } else {
+            throw 'Unsupported release trigger.'
           }
-          $releaseTag = "v$env:RELEASE_VERSION"
-          $knownReleases = @(& gh release list --repo $env:GITHUB_REPOSITORY --limit 100 --json tagName --jq '.[].tagName')
-          if ($LASTEXITCODE -ne 0) { throw 'Cannot check existing GitHub releases.' }
-          if ($knownReleases -contains $releaseTag) {
-            Write-Host "Release already exists: $releaseTag"
-            "publish=false" | Out-File -FilePath $env:GITHUB_OUTPUT -Append -Encoding utf8
+
+          if ($version -cnotmatch '^\d+\.\d+\.\d+$') {
+            throw 'Version must be numeric MAJOR.MINOR.PATCH without suffixes.'
+          }
+          if ($acceptance -cnotin @('limited', 'full')) {
+            throw 'Acceptance must be explicitly limited or full.'
+          }
+          $tag = "v$version"
+          $notesPath = "docs/releases/$tag.md"
+          if (-not (Test-Path -LiteralPath $notesPath -PathType Leaf)) {
+            throw "Missing release-specific notes and acceptance record: $notesPath"
+          }
+          $notes = Get-Content -LiteralPath $notesPath -Raw -Encoding UTF8
+          if (-not ($notes -cmatch "(?m)^Acceptance: $acceptance\s*$")) {
+            throw "The release notes must explicitly record Acceptance: $acceptance."
+          }
+
+          $state = (& gh issue view 2 --repo $env:GITHUB_REPOSITORY --json state --jq '.state')
+          if ($LASTEXITCODE -ne 0 -or -not $state) {
+            throw 'Cannot check Windows 10/11 desktop acceptance issue #2.'
+          }
+          if ($acceptance -eq 'full' -and $state.Trim() -ne 'CLOSED') {
+            throw 'Full acceptance requires documented Windows 10 and 11 results and a closed issue #2.'
+          }
+          # A limited release is permitted only with explicit, version-specific
+          # evidence of owner verification; issue #2 stays open until both OS passes.
+          if ($acceptance -eq 'limited' -and
+              -not ($notes -match '(?i)owner.*verified|owner.*confirmed')) {
+            throw 'Limited release needs an explicit owner-verification statement in its notes.'
+          }
+
+          $existing = @(& gh release list --repo $env:GITHUB_REPOSITORY --limit 100 --json tagName --jq '.[].tagName')
+          if ($LASTEXITCODE -ne 0) { throw 'Cannot inspect existing releases.' }
+          if ($existing -contains $tag) {
+            Write-Host "Already published: $tag"
+            'publish=false' | Out-File -FilePath $env:GITHUB_OUTPUT -Append -Encoding utf8
             exit 0
           }
-          $acceptanceState = (& gh issue view 2 --repo $env:GITHUB_REPOSITORY --json state --jq '.state')
-          if ($LASTEXITCODE -ne 0 -or -not $acceptanceState) {
-            throw 'Could not verify desktop acceptance issue #2.'
-          }
-          $acceptanceState = $acceptanceState.Trim()
-          if ($acceptanceState -ne 'CLOSED') {
-            throw 'Desktop acceptance #2 is still open; release is blocked.'
-          }
-          "publish=true" | Out-File -FilePath $env:GITHUB_OUTPUT -Append -Encoding utf8
+
+          "version=$version" | Out-File -FilePath $env:GITHUB_OUTPUT -Append -Encoding utf8
+          "acceptance=$acceptance" | Out-File -FilePath $env:GITHUB_OUTPUT -Append -Encoding utf8
+          'publish=true' | Out-File -FilePath $env:GITHUB_OUTPUT -Append -Encoding utf8
       - name: Build and test
         if: steps.gate.outputs.publish == 'true'
         shell: cmd
@@ -82,42 +133,39 @@ jobs:
         if: steps.gate.outputs.publish == 'true'
         shell: pwsh
         env:
-          GH_TOKEN: ${{ github.token }}
-          RELEASE_VERSION: ${{ inputs.version }}
+          RELEASE_VERSION: ${{ steps.gate.outputs.version }}
+          ACCEPTANCE: ${{ steps.gate.outputs.acceptance }}
         run: |
           $digest = (Get-FileHash 'build/x64/WindowTidy.exe' -Algorithm SHA256).Hash.ToLowerInvariant()
-          $issueState = (& gh issue view 2 --repo $env:GITHUB_REPOSITORY --json state --jq '.state').Trim()
-          if ($LASTEXITCODE -ne 0) { throw 'Cannot verify GUI acceptance state for release notes.' }
-          $acceptanceNote = if ($issueState -eq 'CLOSED') {
-            'Interactive Windows 10/11 acceptance issue #2 is closed. Consult that issue for the available desktop test evidence.'
-          } else {
-            'IMPORTANT: Interactive Windows 10/11 GUI acceptance is NOT complete (issue #2). This release is available for device testing; CI and smoke tests do not establish desktop compatibility.'
-          }
           "$digest  WindowTidy.exe" | Set-Content 'build/x64/SHA256SUMS.txt' -Encoding Ascii
+          $specific = Get-Content "docs/releases/v$env:RELEASE_VERSION.md" -Raw -Encoding UTF8
+          $acceptanceNote = if ($env:ACCEPTANCE -eq 'limited') {
+            'Acceptance is LIMITED: the owner verified the reported functionality on a real Windows desktop. Separate complete Windows 10 and Windows 11 A01-A21 acceptance is still open as issue #2.'
+          } else {
+            'Acceptance is FULL: consult issue #2 for hands-on Windows 10 and Windows 11 test results.'
+          }
           @"
           Window Tidy v$env:RELEASE_VERSION is a portable unsigned Windows 10/11 x64 executable.
 
-          This build includes the approved Window Tidy application icon in the executable and system tray.
-          Windows CI completed MSVC compilation, native logic tests, shortcut collision integration test,
-          runtime dependency and manifest verification, icon resource and checksum verification,
-          and a process startup smoke test.
+          $specific
 
-          No installer or additional runtime is needed. No third-party runtime dependencies.
-          No code-signing certificate is provided.
+          Build verification: MSVC C++20 compilation and static analysis, native tests,
+          shortcut conflict and Settings lifecycle integration tests, PE/manifest,
+          approved 10-size icon resources and process startup smoke test.
 
           $acceptanceNote
 
-          SHA-256 of WindowTidy.exe:
-          $digest
+          No installer, extra runtime, telemetry or third-party libraries. No code signing.
+          SHA-256 (WindowTidy.exe): $digest
 
-          See README.md and docs/WINDOWS-ACCEPTANCE.md in the repository for usage and test coverage.
+          Source: https://github.com/$env:GITHUB_REPOSITORY/tree/$env:GITHUB_SHA
           "@ | Set-Content 'build/x64/RELEASE-NOTES.txt' -Encoding UTF8
       - name: Publish numbered GitHub Release
         if: steps.gate.outputs.publish == 'true'
         shell: pwsh
         env:
+          RELEASE_VERSION: ${{ steps.gate.outputs.version }}
           GH_TOKEN: ${{ github.token }}
-          RELEASE_VERSION: ${{ inputs.version }}
         run: |
           $tag = "v$env:RELEASE_VERSION"
           & gh release create $tag 'build/x64/WindowTidy.exe' 'build/x64/SHA256SUMS.txt' `

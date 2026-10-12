@@ -56,10 +56,13 @@ enum class TextId {
     DiagnosticUnavailable,
     DiagnosticDisabled,
     DiagnosticAdvice,
+    DiagnosticMessages,
+    DiagnosticTargetValid,
+    DiagnosticTargetInvalid,
 };
 
 struct Translation { const wchar_t* english; const wchar_t* russian; };
-inline constexpr std::array<Translation, 45> kTranslations{{
+inline constexpr std::array<Translation, 48> kTranslations{{
     {L"Window Tidy Settings", L"Настройки Window Tidy"},
     {L"Global hotkeys", L"Глобальные горячие клавиши"},
     {L"Tidy / Undo:", L"Свернуть / вернуть:"},
@@ -105,6 +108,9 @@ inline constexpr std::array<Translation, 45> kTranslations{{
     {L"unavailable", L"недоступна"},
     {L"disabled", L"отключена"},
     {L"\nIf a combination is unavailable, reassign it in Settings. A working hotkey does not guarantee that Windows will allow an action on every window.", L"\nЕсли комбинация недоступна, переназначьте её в настройках. Работающая горячая клавиша не гарантирует возможность управления любым окном."},
+    {L"WM_HOTKEY received:", L"Срабатываний WM_HOTKEY:"},
+    {L"eligible target", L"цель доступна"},
+    {L"no eligible target", L"нет доступного окна"},
 }};
 
 constexpr const wchar_t* Text(TextId id, Language language) noexcept {

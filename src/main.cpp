@@ -603,7 +603,7 @@ void ShowSettings() {
     UnregisterHotkeys();
     DialogBoxParamW(g_instance, MAKEINTRESOURCEW(IDD_SETTINGS), g_window, SettingsProc, 0);
     size_t failure = 0;
-    if (!RegisterHotkeys(g_settings, &failure)) ReportHotkeyFailure(failure);
+    if (!RegisterHotkeys(g_settings, &failure, true)) ReportHotkeyFailure(failure);
     g_settingsDialogOpen = false;
 }
 

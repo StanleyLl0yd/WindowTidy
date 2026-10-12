@@ -40,8 +40,9 @@ jobs:
             throw 'Version must be numerical MAJOR.MINOR.PATCH with no suffix.'
           }
           $releaseTag = "v$env:RELEASE_VERSION"
-          & gh release view $releaseTag --repo $env:GITHUB_REPOSITORY --json tagName 2>$null
-          if ($LASTEXITCODE -eq 0) {
+          $knownReleases = @(& gh release list --repo $env:GITHUB_REPOSITORY --limit 100 --json tagName --jq '.[].tagName')
+          if ($LASTEXITCODE -ne 0) { throw 'Cannot check existing GitHub releases.' }
+          if ($knownReleases -contains $releaseTag) {
             Write-Host "Release already exists: $releaseTag"
             "publish=false" | Out-File -FilePath $env:GITHUB_OUTPUT -Append -Encoding utf8
             exit 0

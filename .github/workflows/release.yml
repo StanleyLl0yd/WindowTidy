@@ -1,8 +1,6 @@
 name: Release Windows x64
 
 on:
-  push:
-    branches: [main]
   workflow_dispatch:
     inputs:
       version:
@@ -31,7 +29,7 @@ jobs:
         shell: pwsh
         env:
           GH_TOKEN: ${{ github.token }}
-          RELEASE_VERSION: ${{ inputs.version || '0.1.0' }}
+          RELEASE_VERSION: ${{ inputs.version }}
         run: |
           if ($env:GITHUB_REF -ne 'refs/heads/main') {
             throw 'Release workflow must be dispatched on main.'
@@ -53,12 +51,7 @@ jobs:
           }
           $acceptanceState = $acceptanceState.Trim()
           if ($acceptanceState -ne 'CLOSED') {
-            # Owner explicitly requested a first downloadable release before GUI acceptance.
-            # This exception is limited to the one-time main push for v0.1.0.
-            if ($env:GITHUB_EVENT_NAME -ne 'push' -or $env:RELEASE_VERSION -ne '0.1.0') {
-              throw 'Desktop acceptance #2 is still open; manual releases remain gated.'
-            }
-            Write-Warning 'v0.1.0 will be published with GUI acceptance explicitly marked pending.'
+            throw 'Desktop acceptance #2 is still open; release is blocked.'
           }
           "publish=true" | Out-File -FilePath $env:GITHUB_OUTPUT -Append -Encoding utf8
       - name: Build and test
@@ -90,13 +83,13 @@ jobs:
         shell: pwsh
         env:
           GH_TOKEN: ${{ github.token }}
-          RELEASE_VERSION: ${{ inputs.version || '0.1.0' }}
+          RELEASE_VERSION: ${{ inputs.version }}
         run: |
           $digest = (Get-FileHash 'build/x64/WindowTidy.exe' -Algorithm SHA256).Hash.ToLowerInvariant()
           $issueState = (& gh issue view 2 --repo $env:GITHUB_REPOSITORY --json state --jq '.state').Trim()
           if ($LASTEXITCODE -ne 0) { throw 'Cannot verify GUI acceptance state for release notes.' }
           $acceptanceNote = if ($issueState -eq 'CLOSED') {
-            'Interactive Windows 10/11 acceptance: completed in issue #2.'
+            'Interactive Windows 10/11 acceptance issue #2 is closed. Consult that issue for the available desktop test evidence.'
           } else {
             'IMPORTANT: Interactive Windows 10/11 GUI acceptance is NOT complete (issue #2). This release is available for device testing; CI and smoke tests do not establish desktop compatibility.'
           }
@@ -124,7 +117,7 @@ jobs:
         shell: pwsh
         env:
           GH_TOKEN: ${{ github.token }}
-          RELEASE_VERSION: ${{ inputs.version || '0.1.0' }}
+          RELEASE_VERSION: ${{ inputs.version }}
         run: |
           $tag = "v$env:RELEASE_VERSION"
           & gh release create $tag 'build/x64/WindowTidy.exe' 'build/x64/SHA256SUMS.txt' `

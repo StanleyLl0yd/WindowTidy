@@ -28,6 +28,8 @@ enum HotkeyIndex : size_t { Tidy = 0, Topmost = 1, Next = 2, Previous = 3, Minim
 constexpr size_t kActionCount = 5;
 constexpr int kHotkeyBaseId = 100;
 constexpr UINT_PTR kTrayRetryTimer = 1;
+constexpr size_t kMaxTrayTargets = 24;
+static_assert(ID_TRAY_TARGET_BASE + kMaxTrayTargets * kActionCount < 0x10000);
 
 struct Settings {
     bool skipTopmost = true;
@@ -56,6 +58,12 @@ struct Monitor {
     HMONITOR handle{};
     RECT screen{};
     RECT work{};
+};
+struct TrayTarget {
+    HWND hwnd{};
+    DWORD process{};
+    DWORD thread{};
+    std::wstring title;
 };
 
 HINSTANCE g_instance{};
@@ -404,6 +412,20 @@ void RemoveTray() {
 }
 
 void ShowSettings();
+void DispatchAction(HotkeyIndex action, HWND target);
+
+BOOL CALLBACK CollectTrayTargets(HWND window, LPARAM context) {
+    auto& targets = *reinterpret_cast<std::vector<TrayTarget>*>(context);
+    if (!EligibleWindow(window) || IsIconic(window)) return TRUE;
+    wchar_t name[160]{};
+    const int length = GetWindowTextW(window, name, static_cast<int>(std::size(name)));
+    if (length <= 0) return TRUE;
+    DWORD pid{};
+    const DWORD thread = GetWindowThreadProcessId(window, &pid);
+    if (pid == 0 || thread == 0) return TRUE;
+    targets.push_back(TrayTarget{window, pid, thread, std::wstring(name, static_cast<size_t>(length))});
+    return targets.size() < kMaxTrayTargets;
+}
 
 std::wstring HotkeyName(wt::Hotkey shortcut) {
     std::wstring result;
@@ -486,6 +508,36 @@ void TrayMenu() {
     AppendMenuW(menu, MF_STRING, ID_TRAY_NEXT, Tr(wt::TextId::TrayNext));
     AppendMenuW(menu, MF_STRING, ID_TRAY_PREV, Tr(wt::TextId::TrayPrevious));
     AppendMenuW(menu, MF_STRING, ID_TRAY_MINIMIZE, Tr(wt::TextId::TrayMinimize));
+    // An explicit choice avoids guessing the foreground window after Explorer
+    // takes focus while opening the notification-area menu.
+    std::vector<TrayTarget> targets;
+    EnumWindows(CollectTrayTargets, reinterpret_cast<LPARAM>(&targets));
+    HMENU chooseWindow = CreatePopupMenu();
+    if (chooseWindow) {
+        constexpr std::array<wt::TextId, kActionCount> actions{{
+            wt::TextId::TrayTidy, wt::TextId::TrayTopmost, wt::TextId::TrayNext,
+            wt::TextId::TrayPrevious, wt::TextId::TrayMinimize
+        }};
+        for (size_t i = 0; i < targets.size(); ++i) {
+            HMENU actionsMenu = CreatePopupMenu();
+            if (!actionsMenu) continue;
+            for (size_t action = 0; action < actions.size(); ++action) {
+                const UINT id = ID_TRAY_TARGET_BASE + static_cast<UINT>(i * kActionCount + action);
+                AppendMenuW(actionsMenu, MF_STRING, id, Tr(actions[action]));
+            }
+            if (!AppendMenuW(chooseWindow, MF_POPUP,
+                             reinterpret_cast<UINT_PTR>(actionsMenu), targets[i].title.c_str())) {
+                DestroyMenu(actionsMenu);
+            }
+        }
+        if (GetMenuItemCount(chooseWindow) == 0) {
+            AppendMenuW(chooseWindow, MF_STRING | MF_GRAYED, 0, Tr(wt::TextId::TrayNoTargets));
+        }
+        if (!AppendMenuW(menu, MF_POPUP, reinterpret_cast<UINT_PTR>(chooseWindow),
+                         Tr(wt::TextId::TrayChooseTarget))) {
+            DestroyMenu(chooseWindow);
+        }
+    }
     AppendMenuW(menu, MF_SEPARATOR, 0, nullptr);
     AppendMenuW(menu, MF_STRING, ID_TRAY_SETTINGS, Tr(wt::TextId::TraySettings));
     AppendMenuW(menu, MF_STRING, ID_TRAY_DIAGNOSTICS, Tr(wt::TextId::TrayDiagnostics));
@@ -505,7 +557,18 @@ void TrayMenu() {
         SetForegroundWindow(g_window);
         const UINT chosen = TrackPopupMenu(menu, TPM_RETURNCMD | TPM_RIGHTBUTTON,
                                             cursor.x, cursor.y, 0, g_window, nullptr);
-        if (chosen != 0) SendMessageW(g_window, WM_COMMAND, chosen, 0);
+        const UINT targetEnd = ID_TRAY_TARGET_BASE + static_cast<UINT>(targets.size() * kActionCount);
+        if (chosen >= ID_TRAY_TARGET_BASE && chosen < targetEnd) {
+            const UINT offset = chosen - ID_TRAY_TARGET_BASE;
+            const auto& selected = targets[offset / kActionCount];
+            DWORD pid{};
+            const DWORD thread = GetWindowThreadProcessId(selected.hwnd, &pid);
+            if (pid == selected.process && thread == selected.thread && EligibleWindow(selected.hwnd)) {
+                DispatchAction(static_cast<HotkeyIndex>(offset % kActionCount), selected.hwnd);
+            }
+        } else if (chosen != 0) {
+            SendMessageW(g_window, WM_COMMAND, chosen, 0);
+        }
         PostMessageW(g_window, WM_NULL, 0, 0);
     }
     DestroyMenu(menu);

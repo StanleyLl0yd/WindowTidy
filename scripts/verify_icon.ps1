@@ -9,9 +9,13 @@ $expectedSizes = @(16, 20, 24, 32, 40, 48, 64, 96, 128, 256)
 foreach ($path in @($source, $ico, $exe)) {
     if (-not (Test-Path -LiteralPath $path -PathType Leaf)) { throw "Missing required icon/build file: $path" }
 }
-foreach ($item in @(@($source, $expectedSourceHash), @($ico, $expectedIcoHash))) {
-    $actual = (Get-FileHash -LiteralPath $item[0] -Algorithm SHA256).Hash.ToLowerInvariant()
-    if ($actual -ne $item[1]) { throw "Icon asset SHA-256 mismatch: $($item[0])" }
+$assets = @(
+    [pscustomobject]@{ Path = $source; ExpectedHash = $expectedSourceHash }
+    [pscustomobject]@{ Path = $ico; ExpectedHash = $expectedIcoHash }
+)
+foreach ($asset in $assets) {
+    $actual = (Get-FileHash -LiteralPath $asset.Path -Algorithm SHA256).Hash.ToLowerInvariant()
+    if ($actual -ne $asset.ExpectedHash) { throw "Icon asset SHA-256 mismatch: $($asset.Path)" }
 }
 
 $bytes = [IO.File]::ReadAllBytes((Resolve-Path -LiteralPath $ico).Path)

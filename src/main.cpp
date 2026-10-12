@@ -14,6 +14,7 @@
 #include "windowtidy/hotkeys.hpp"
 #include "windowtidy/localization.hpp"
 #include "windowtidy/menu_title.hpp"
+#include "windowtidy/tray_target.hpp"
 #include "../res/resource.h"
 
 namespace {
@@ -61,9 +62,7 @@ struct Monitor {
     RECT work{};
 };
 struct TrayTarget {
-    HWND hwnd{};
-    DWORD process{};
-    DWORD thread{};
+    wt::WindowIdentity identity{};
     std::wstring title;
 };
 
@@ -75,7 +74,7 @@ HICON g_smallIcon{};
 NOTIFYICONDATAW g_tray{};
 bool g_trayAdded = false;
 bool g_settingsDialogOpen = false;
-HWND g_trayTarget{};
+wt::WindowIdentity g_trayTarget{};
 Settings g_settings{};
 wt::Language g_language = wt::Language::English;
 std::array<bool, kActionCount> g_hotkeyActive{};
@@ -421,10 +420,9 @@ BOOL CALLBACK CollectTrayTargets(HWND window, LPARAM context) {
     wchar_t name[160]{};
     const int length = GetWindowTextW(window, name, static_cast<int>(std::size(name)));
     if (length <= 0) return TRUE;
-    DWORD pid{};
-    const DWORD thread = GetWindowThreadProcessId(window, &pid);
-    if (pid == 0 || thread == 0) return TRUE;
-    targets.push_back(TrayTarget{window, pid, thread, std::wstring(name, static_cast<size_t>(length))});
+    const auto identity = wt::CaptureWindowIdentity(window);
+    if (!identity.hwnd) return TRUE;
+    targets.push_back(TrayTarget{identity, std::wstring(name, static_cast<size_t>(length))});
     return targets.size() < kMaxTrayTargets;
 }
 
@@ -499,7 +497,7 @@ void ShowHotkeyDiagnostics() {
 
 void TrayMenu() {
     // Snapshot the foreground before our menu receives activation. Hotkeys use live foreground.
-    g_trayTarget = ActiveWindow();
+    g_trayTarget = wt::CaptureWindowIdentity(ActiveWindow());
     HMENU menu = CreatePopupMenu();
     if (!menu) return;
     AppendMenuW(menu, MF_STRING, ID_TRAY_TIDY, Tr(wt::TextId::TrayTidy));
@@ -548,7 +546,7 @@ void TrayMenu() {
     AppendMenuW(menu, MF_SEPARATOR, 0, nullptr);
     AppendMenuW(menu, MF_STRING, ID_TRAY_EXIT, Tr(wt::TextId::TrayExit));
     if (g_tidied.empty()) EnableMenuItem(menu, ID_TRAY_UNDO, MF_BYCOMMAND | MF_GRAYED);
-    if (!g_trayTarget) {
+    if (!g_trayTarget.hwnd) {
         for (const UINT command : {ID_TRAY_TIDY, ID_TRAY_TOPMOST, ID_TRAY_NEXT,
                                    ID_TRAY_PREV, ID_TRAY_MINIMIZE}) {
             EnableMenuItem(menu, command, MF_BYCOMMAND | MF_GRAYED);
@@ -563,10 +561,8 @@ void TrayMenu() {
         if (chosen >= ID_TRAY_TARGET_BASE && chosen < targetEnd) {
             const UINT offset = chosen - ID_TRAY_TARGET_BASE;
             const auto& selected = targets[offset / kActionCount];
-            DWORD pid{};
-            const DWORD thread = GetWindowThreadProcessId(selected.hwnd, &pid);
-            if (pid == selected.process && thread == selected.thread && EligibleWindow(selected.hwnd)) {
-                DispatchAction(static_cast<HotkeyIndex>(offset % kActionCount), selected.hwnd);
+            if (wt::MatchesWindowIdentity(selected.identity) && EligibleWindow(selected.identity.hwnd)) {
+                DispatchAction(static_cast<HotkeyIndex>(offset % kActionCount), selected.identity.hwnd);
             }
         } else if (chosen != 0) {
             SendMessageW(g_window, WM_COMMAND, chosen, 0);
@@ -574,7 +570,12 @@ void TrayMenu() {
         PostMessageW(g_window, WM_NULL, 0, 0);
     }
     DestroyMenu(menu);
-    g_trayTarget = nullptr;
+    g_trayTarget = {};
+}
+
+HWND VerifiedTrayTarget() {
+    return wt::MatchesWindowIdentity(g_trayTarget) && EligibleWindow(g_trayTarget.hwnd)
+        ? g_trayTarget.hwnd : nullptr;
 }
 
 void FillHotkeyControl(HWND dialog, int id, wt::Hotkey hotkey) {
@@ -738,12 +739,14 @@ LRESULT CALLBACK WindowProc(HWND window, UINT message, WPARAM wparam, LPARAM lpa
         return 0;
     case WM_COMMAND:
         switch (LOWORD(wparam)) {
-        case ID_TRAY_TIDY: DispatchAction(Tidy, g_trayTarget); break;
+        case ID_TRAY_TIDY:
+            if (const HWND target = VerifiedTrayTarget()) DispatchAction(Tidy, target);
+            break;
         case ID_TRAY_UNDO: UndoTidy(); break;
-        case ID_TRAY_TOPMOST: DispatchAction(Topmost, g_trayTarget); break;
-        case ID_TRAY_NEXT: DispatchAction(Next, g_trayTarget); break;
-        case ID_TRAY_PREV: DispatchAction(Previous, g_trayTarget); break;
-        case ID_TRAY_MINIMIZE: DispatchAction(Minimize, g_trayTarget); break;
+        case ID_TRAY_TOPMOST: DispatchAction(Topmost, VerifiedTrayTarget()); break;
+        case ID_TRAY_NEXT: DispatchAction(Next, VerifiedTrayTarget()); break;
+        case ID_TRAY_PREV: DispatchAction(Previous, VerifiedTrayTarget()); break;
+        case ID_TRAY_MINIMIZE: DispatchAction(Minimize, VerifiedTrayTarget()); break;
         case ID_TRAY_SETTINGS: ShowSettings(); break;
         case ID_TRAY_DIAGNOSTICS: ShowHotkeyDiagnostics(); break;
         case ID_TRAY_STARTUP:

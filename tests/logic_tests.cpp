@@ -2,6 +2,7 @@
 #include "windowtidy/hotkeys.hpp"
 #include "windowtidy/localization.hpp"
 #include "windowtidy/menu_title.hpp"
+#include "windowtidy/tray_target.hpp"
 #include <cassert>
 #include <cstdio>
 
@@ -10,6 +11,24 @@ int main() {
     assert(SafeMenuLabel(L"Notes & tasks") == L"Notes && tasks");
     assert(SafeMenuLabel(L"Title\tCtrl+K\n") == L"Title Ctrl+K ");
     assert(SafeMenuLabel(L"") == L"");
+
+    assert(!CaptureWindowIdentity(nullptr).hwnd);
+    assert(!MatchesWindowIdentity({}));
+    const HWND probe = CreateWindowExW(0, L"STATIC", L"Identity probe", WS_POPUP,
+                                      0, 0, 16, 16, nullptr, nullptr, GetModuleHandleW(nullptr), nullptr);
+    assert(probe != nullptr);
+    const auto identity = CaptureWindowIdentity(probe);
+    assert(identity.hwnd == probe && identity.pid == GetCurrentProcessId());
+    assert(identity.thread == GetCurrentThreadId());
+    assert(MatchesWindowIdentity(identity));
+    auto wrongPid = identity;
+    ++wrongPid.pid;
+    assert(!MatchesWindowIdentity(wrongPid));
+    auto wrongThread = identity;
+    ++wrongThread.thread;
+    assert(!MatchesWindowIdentity(wrongThread));
+    assert(DestroyWindow(probe));
+    assert(!MatchesWindowIdentity(identity));
     static_assert(LanguageForUiLang(MAKELANGID(LANG_RUSSIAN, SUBLANG_DEFAULT)) == Language::Russian);
     static_assert(LanguageForUiLang(MAKELANGID(LANG_ENGLISH, SUBLANG_ENGLISH_US)) == Language::English);
     static_assert(LanguageForUiLang(MAKELANGID(LANG_GERMAN, SUBLANG_GERMAN)) == Language::English);

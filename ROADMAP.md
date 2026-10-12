@@ -32,7 +32,8 @@
 
 - [ ] Optional per-application exclusion rules in the registry.
 - [ ] Optional per-monitor Tidy filtering improvements.
-- [ ] Native application icon and polish.
+- [x] Approved native app icon embedded into the executable and tray (desktop visual acceptance remains open).
+- [ ] Other application polish.
 - [ ] Documentation for supported OS versions, permissions and troubleshooting.
 
 No additional features will be introduced into M0 at the expense of basic reliability.

@@ -9,7 +9,7 @@ A lightweight, portable Windows desktop window manager written in native C++20 a
 - **Move monitor:** move a window to the next or previous display, preserving relative placement, centering or maximizing it.
 - **Minimize:** minimize the active window.
 - **Global hotkeys:** customize all five shortcuts in Settings.
-- **Tray application:** Windows notification area icon and native Settings dialog.
+- **Tray application:** the approved Window Tidy icon in the executable, notification area and native Settings dialog.
 - **Windows Registry only:** no INI, JSON or local settings files.
 
 ### Default hotkeys
@@ -47,6 +47,8 @@ scripts\build.cmd test
 ```
 
 GitHub Actions builds and tests on a Windows runner; successful runs publish a downloadable unsigned executable artifact. Do not treat an artifact as a released or digitally signed build.
+
+The application icon is embedded into the executable and notification-area icon. The canonical unmodified artwork is `res/WindowTidy.source.png`; `res/WindowTidy.ico` contains its raster-only Windows-sized derivatives (16, 20, 24, 32, 40, 48, 64, 96, 128 and 256 px). No external assets are needed at runtime.
 
 ## Configuration
 

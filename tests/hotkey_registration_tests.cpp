@@ -81,7 +81,7 @@ HWND WaitForSettings(DWORD pid) {
     return nullptr;
 }
 
-bool RunSettingsCancel(const wchar_t* path, Shortcut expected) {
+bool RunSettingsCycle(const wchar_t* path, Shortcut expected, bool save) {
     if (!Available(expected)) return false;
     std::wstring command = L"\"" + std::wstring(path) + L"\"";
     STARTUPINFOW startup{};
@@ -98,7 +98,7 @@ bool RunSettingsCancel(const wchar_t* path, Shortcut expected) {
     const bool opened = mainWindow && PostMessageW(mainWindow, WM_SHOWSETTINGS, 0, 0);
     const HWND dialog = opened ? WaitForSettings(process.dwProcessId) : nullptr;
     const bool suspended = dialog && WaitForShortcut(expected, true, 5000);
-    if (dialog) PostMessageW(dialog, WM_COMMAND, MAKEWPARAM(IDCANCEL, BN_CLICKED), 0);
+    if (dialog) PostMessageW(dialog, WM_COMMAND, MAKEWPARAM(save ? IDOK : IDCANCEL, BN_CLICKED), 0);
     const bool restored = dialog && WaitForShortcut(expected, false, 5000);
     StopChild(process);
     const bool released = Available(expected);
@@ -128,10 +128,16 @@ int wmain(int argc, wchar_t** argv) {
         std::fputs("FAILED: Ctrl+Alt+Z collision must preserve Alt+H\n", stderr);
         return 1;
     }
-    if (!RunSettingsCancel(path, tidy)) {
-        std::fputs("FAILED: shortcut must be restored after Settings Cancel\\n", stderr);
+    if (!RunSettingsCycle(path, tidy, false)) {
+        std::fputs("FAILED: shortcut must be restored after Settings Cancel\n", stderr);
         return 1;
     }
-    std::puts("Hotkey collision and Settings Cancel lifecycle regressions passed");
+    // Save writes per-user registry settings; restrict this path to ephemeral CI desktops.
+    if (GetEnvironmentVariableW(L"CI", nullptr, 0) != 0 &&
+        !RunSettingsCycle(path, tidy, true)) {
+        std::fputs("FAILED: shortcut must remain registered after Settings Save\n", stderr);
+        return 1;
+    }
+    std::puts("Hotkey conflicts and Settings Cancel/Save lifecycle checks passed");
     return 0;
 }

@@ -59,10 +59,13 @@ enum class TextId {
     DiagnosticMessages,
     DiagnosticTargetValid,
     DiagnosticTargetInvalid,
+    DiagnosticNotRegistered,
+    DiagnosticSuspended,
+    DiagnosticVirtualKey,
 };
 
 struct Translation { const wchar_t* english; const wchar_t* russian; };
-inline constexpr std::array<Translation, 48> kTranslations{{
+inline constexpr std::array<Translation, 51> kTranslations{{
     {L"Window Tidy Settings", L"Настройки Window Tidy"},
     {L"Global hotkeys", L"Глобальные горячие клавиши"},
     {L"Tidy / Undo:", L"Свернуть / вернуть:"},
@@ -111,6 +114,9 @@ inline constexpr std::array<Translation, 48> kTranslations{{
     {L"WM_HOTKEY received:", L"Срабатываний WM_HOTKEY:"},
     {L"eligible target", L"цель доступна"},
     {L"no eligible target", L"нет доступного окна"},
+    {L"not registered", L"не зарегистрирована"},
+    {L"temporarily suspended while Settings is open", L"временно отключена, пока открыты настройки"},
+    {L"VK", L"VK"},
 }};
 
 constexpr const wchar_t* Text(TextId id, Language language) noexcept {

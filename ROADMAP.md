@@ -25,12 +25,13 @@
 - [x] Correct hotkey re-registration after Settings Save, retain bindings after Cancel, and add CI regression tests.
 - [x] Add automatic Russian/English UI localization and native per-shortcut diagnostics.
 - [x] Obtain positive owner verification of all app actions on a Windows desktop ([#10](https://github.com/StanleyLl0yd/WindowTidy/issues/10)).
-- [ ] Publish 0.1.1 as an explicitly limited-acceptance numbered release, while preserving issue #2 for full OS coverage.
+- [x] Publish 0.1.1 as an explicitly limited-acceptance numbered release, while preserving issue #2 for full OS coverage.
 
 ## M1: Reliability
 
 - [ ] Real-desktop tests for mixed scaling, multiple taskbar positions, portrait displays and hot-plug.
-- [ ] Check taskbar/tray focus edge cases and owned/modal windows ([#3](https://github.com/StanleyLl0yd/WindowTidy/issues/3)).
+- [x] Add explicit on-demand window selection to tray operations; no focus guessing, keyboard hooks or polling ([#3](https://github.com/StanleyLl0yd/WindowTidy/issues/3)).
+- [ ] Verify that picker against real Explorer/taskbar focus scenarios, protected and nonstandard windows, and accessibility before closing #3.
 - [ ] Accessibility and keyboard-only Settings workflow.
 - [x] Implement retry-based recovery of the notification icon after Explorer restarts (interactive acceptance remains in #2).
 - [ ] Verify elevated / protected / UWP window behavior.

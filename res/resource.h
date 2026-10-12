@@ -18,6 +18,15 @@
 #define IDC_RUN_AT_STARTUP        1104
 #define IDC_HOTKEY_HELP           1105
 
+#define IDC_TXT_GLOBAL              1110
+#define IDC_TXT_TIDY                1111
+#define IDC_TXT_TOPMOST             1112
+#define IDC_TXT_NEXT                1113
+#define IDC_TXT_PREV                1114
+#define IDC_TXT_MINIMIZE            1115
+#define IDC_TXT_BEHAVIOR            1116
+#define IDC_TXT_MOVE_MODE           1117
+
 #define WM_TRAYICON               (WM_APP + 1)
 #define WM_SHOWSETTINGS           (WM_APP + 2)
 
@@ -30,3 +39,4 @@
 #define ID_TRAY_SETTINGS          40007
 #define ID_TRAY_STARTUP           40008
 #define ID_TRAY_EXIT              40009
+#define ID_TRAY_DIAGNOSTICS       40010

@@ -7,10 +7,12 @@
 #include <array>
 #include <cwchar>
 #include <string>
+#include <utility>
 #include <vector>
 
 #include "windowtidy/geometry.hpp"
 #include "windowtidy/hotkeys.hpp"
+#include "windowtidy/localization.hpp"
 #include "../res/resource.h"
 
 namespace {
@@ -66,13 +68,23 @@ bool g_trayAdded = false;
 bool g_settingsDialogOpen = false;
 HWND g_trayTarget{};
 Settings g_settings{};
+wt::Language g_language = wt::Language::English;
+std::array<bool, kActionCount> g_hotkeyActive{};
+std::array<DWORD, kActionCount> g_hotkeyErrors{};
+std::array<unsigned, kActionCount> g_hotkeyMessages{};
+std::array<bool, kActionCount> g_hotkeyLastTargetValid{};
 std::vector<TidyEntry> g_tidied;
+
+const wchar_t* Tr(wt::TextId id) {
+    return wt::Text(id, g_language);
+}
 
 constexpr std::array<int, kActionCount> kHotkeyControls{
     IDC_HK_TIDY, IDC_HK_TOPMOST, IDC_HK_NEXT, IDC_HK_PREV, IDC_HK_MINIMIZE
 };
-constexpr std::array<const wchar_t*, kActionCount> kHotkeyNames{
-    L"Tidy", L"Always on top", L"Next monitor", L"Previous monitor", L"Minimize"
+constexpr std::array<wt::TextId, kActionCount> kHotkeyNames{
+    wt::TextId::ActionTidy, wt::TextId::ActionTopmost, wt::TextId::ActionNext,
+    wt::TextId::ActionPrevious, wt::TextId::ActionMinimize
 };
 constexpr std::array<const wchar_t*, kActionCount> kHotkeyValues{
     L"Tidy", L"Topmost", L"MoveNext", L"MovePrev", L"MinimizeActive"
@@ -209,15 +221,21 @@ HWND ActiveWindow() {
 bool RegisterHotkeys(const Settings& settings, size_t* badIndex = nullptr, bool keepSuccessful = false) {
     bool allRegistered = true;
     for (size_t i = 0; i < kActionCount; ++i) {
+        g_hotkeyActive[i] = false;
+        g_hotkeyErrors[i] = 0;
         if (settings.shortcuts[i].vk == 0) continue;
         const auto hotkey = settings.shortcuts[i];
-        if (!RegisterHotKey(g_window, kHotkeyBaseId + static_cast<int>(i),
-                            hotkey.mods | MOD_NOREPEAT, hotkey.vk)) {
+        if (RegisterHotKey(g_window, kHotkeyBaseId + static_cast<int>(i),
+                           hotkey.mods | MOD_NOREPEAT, hotkey.vk)) {
+            g_hotkeyActive[i] = true;
+        } else {
+            g_hotkeyErrors[i] = GetLastError();
             if (allRegistered && badIndex) *badIndex = i;
             allRegistered = false;
             if (!keepSuccessful) {
                 for (size_t j = 0; j < i; ++j) {
-                    UnregisterHotKey(g_window, kHotkeyBaseId + static_cast<int>(j));
+                    if (g_hotkeyActive[j]) UnregisterHotKey(g_window, kHotkeyBaseId + static_cast<int>(j));
+                    g_hotkeyActive[j] = false;
                 }
                 return false;
             }
@@ -228,13 +246,15 @@ bool RegisterHotkeys(const Settings& settings, size_t* badIndex = nullptr, bool 
 
 void UnregisterHotkeys() {
     for (size_t i = 0; i < kActionCount; ++i) {
-        UnregisterHotKey(g_window, kHotkeyBaseId + static_cast<int>(i));
+        if (g_hotkeyActive[i]) UnregisterHotKey(g_window, kHotkeyBaseId + static_cast<int>(i));
+        g_hotkeyActive[i] = false;
+        g_hotkeyErrors[i] = 0;
     }
 }
 
 void ReportHotkeyFailure(size_t badIndex, HWND owner = nullptr) {
-    Warn(std::wstring(L"Cannot register global shortcut: ") + kHotkeyNames[badIndex] +
-         L".\n\nAnother application or Windows may already use this combination.", owner);
+    Warn(std::wstring(Tr(wt::TextId::WarnRegistration)) + Tr(kHotkeyNames[badIndex]) +
+         Tr(wt::TextId::WarnRegistrationDetail), owner);
 }
 
 BOOL CALLBACK EnumerateTidy(HWND window, LPARAM param) {
@@ -379,24 +399,79 @@ void RemoveTray() {
 
 void ShowSettings();
 
+std::wstring HotkeyName(wt::Hotkey shortcut) {
+    std::wstring result;
+    if (shortcut.mods & MOD_CONTROL) result += L"Ctrl+";
+    if (shortcut.mods & MOD_ALT) result += L"Alt+";
+    if (shortcut.mods & MOD_SHIFT) result += L"Shift+";
+    if (shortcut.vk >= 'A' && shortcut.vk <= 'Z') {
+        result += static_cast<wchar_t>(shortcut.vk);
+    } else {
+        wchar_t name[64]{};
+        const UINT scan = MapVirtualKeyW(shortcut.vk, MAPVK_VK_TO_VSC_EX);
+        const LONG keyData = static_cast<LONG>(((scan & 0xffu) << 16u) |
+                                               ((scan & 0xff00u) ? (1u << 24u) : 0u));
+        if (GetKeyNameTextW(keyData, name, static_cast<int>(std::size(name))) > 0) {
+            result += name;
+        } else {
+            result += L"VK " + std::to_wstring(shortcut.vk);
+        }
+    }
+    return result;
+}
+
+void ShowHotkeyDiagnostics() {
+    std::wstring report = Tr(wt::TextId::DiagnosticIntro);
+    for (size_t i = 0; i < kActionCount; ++i) {
+        const auto shortcut = g_settings.shortcuts[i];
+        report += L"\n";
+        report += Tr(kHotkeyNames[i]);
+        report += L": ";
+        if (shortcut.vk == 0) {
+            report += Tr(wt::TextId::DiagnosticDisabled);
+        } else {
+            report += HotkeyName(shortcut);
+            report += L" - ";
+            report += Tr(g_hotkeyActive[i] ? wt::TextId::DiagnosticActive :
+                         wt::TextId::DiagnosticUnavailable);
+            if (!g_hotkeyActive[i] && g_hotkeyErrors[i] != 0) {
+                report += L" (Win32: " + std::to_wstring(g_hotkeyErrors[i]) + L")";
+            }
+            report += L" [";
+            report += Tr(wt::TextId::DiagnosticMessages);
+            report += L" " + std::to_wstring(g_hotkeyMessages[i]);
+            if (g_hotkeyMessages[i] != 0) {
+                report += L", ";
+                report += Tr(g_hotkeyLastTargetValid[i] ? wt::TextId::DiagnosticTargetValid :
+                             wt::TextId::DiagnosticTargetInvalid);
+            }
+            report += L"]";
+        }
+    }
+    report += L"\n";
+    report += Tr(wt::TextId::DiagnosticAdvice);
+    MessageBoxW(g_window, report.c_str(), Tr(wt::TextId::DiagnosticTitle), MB_OK | MB_ICONINFORMATION);
+}
+
 void TrayMenu() {
     // Snapshot the foreground before our menu receives activation. Hotkeys use live foreground.
     g_trayTarget = ActiveWindow();
     HMENU menu = CreatePopupMenu();
     if (!menu) return;
-    AppendMenuW(menu, MF_STRING, ID_TRAY_TIDY, L"Tidy / Undo");
-    AppendMenuW(menu, MF_STRING, ID_TRAY_UNDO, L"Undo Tidy");
+    AppendMenuW(menu, MF_STRING, ID_TRAY_TIDY, Tr(wt::TextId::TrayTidy));
+    AppendMenuW(menu, MF_STRING, ID_TRAY_UNDO, Tr(wt::TextId::TrayUndo));
     AppendMenuW(menu, MF_SEPARATOR, 0, nullptr);
-    AppendMenuW(menu, MF_STRING, ID_TRAY_TOPMOST, L"Toggle always on top");
-    AppendMenuW(menu, MF_STRING, ID_TRAY_NEXT, L"Move to next monitor");
-    AppendMenuW(menu, MF_STRING, ID_TRAY_PREV, L"Move to previous monitor");
-    AppendMenuW(menu, MF_STRING, ID_TRAY_MINIMIZE, L"Minimize active window");
+    AppendMenuW(menu, MF_STRING, ID_TRAY_TOPMOST, Tr(wt::TextId::TrayTopmost));
+    AppendMenuW(menu, MF_STRING, ID_TRAY_NEXT, Tr(wt::TextId::TrayNext));
+    AppendMenuW(menu, MF_STRING, ID_TRAY_PREV, Tr(wt::TextId::TrayPrevious));
+    AppendMenuW(menu, MF_STRING, ID_TRAY_MINIMIZE, Tr(wt::TextId::TrayMinimize));
     AppendMenuW(menu, MF_SEPARATOR, 0, nullptr);
-    AppendMenuW(menu, MF_STRING, ID_TRAY_SETTINGS, L"Settings...");
+    AppendMenuW(menu, MF_STRING, ID_TRAY_SETTINGS, Tr(wt::TextId::TraySettings));
+    AppendMenuW(menu, MF_STRING, ID_TRAY_DIAGNOSTICS, Tr(wt::TextId::TrayDiagnostics));
     AppendMenuW(menu, MF_STRING | (StartupEnabled() ? MF_CHECKED : 0),
-                ID_TRAY_STARTUP, L"Start with Windows");
+                ID_TRAY_STARTUP, Tr(wt::TextId::TrayStartup));
     AppendMenuW(menu, MF_SEPARATOR, 0, nullptr);
-    AppendMenuW(menu, MF_STRING, ID_TRAY_EXIT, L"Exit");
+    AppendMenuW(menu, MF_STRING, ID_TRAY_EXIT, Tr(wt::TextId::TrayExit));
     if (g_tidied.empty()) EnableMenuItem(menu, ID_TRAY_UNDO, MF_BYCOMMAND | MF_GRAYED);
     if (!g_trayTarget) {
         for (const UINT command : {ID_TRAY_TIDY, ID_TRAY_TOPMOST, ID_TRAY_NEXT,
@@ -436,12 +511,32 @@ wt::Hotkey ReadHotkeyControl(HWND dialog, int id) {
 INT_PTR CALLBACK SettingsProc(HWND dialog, UINT message, WPARAM wparam, LPARAM) {
     switch (message) {
     case WM_INITDIALOG: {
+        SetWindowTextW(dialog, Tr(wt::TextId::SettingsTitle));
+        constexpr std::array<std::pair<int, wt::TextId>, 14> labels{{
+            {IDC_TXT_GLOBAL, wt::TextId::GlobalHotkeys},
+            {IDC_TXT_TIDY, wt::TextId::TidyLabel},
+            {IDC_TXT_TOPMOST, wt::TextId::TopmostLabel},
+            {IDC_TXT_NEXT, wt::TextId::NextLabel},
+            {IDC_TXT_PREV, wt::TextId::PreviousLabel},
+            {IDC_TXT_MINIMIZE, wt::TextId::MinimizeLabel},
+            {IDC_TXT_BEHAVIOR, wt::TextId::Behavior},
+            {IDC_SKIP_TOPMOST, wt::TextId::SkipTopmost},
+            {IDC_ONLY_CURRENT, wt::TextId::OnlyCurrent},
+            {IDC_TXT_MOVE_MODE, wt::TextId::MoveModeLabel},
+            {IDC_RUN_AT_STARTUP, wt::TextId::RunAtStartup},
+            {IDC_HOTKEY_HELP, wt::TextId::HotkeyHelp},
+            {IDOK, wt::TextId::Save},
+            {IDCANCEL, wt::TextId::Cancel}
+        }};
+        for (const auto& [control, text] : labels) {
+            SetDlgItemTextW(dialog, control, Tr(text));
+        }
         CheckDlgButton(dialog, IDC_SKIP_TOPMOST, g_settings.skipTopmost ? BST_CHECKED : BST_UNCHECKED);
         CheckDlgButton(dialog, IDC_ONLY_CURRENT, g_settings.onlyCurrentMonitor ? BST_CHECKED : BST_UNCHECKED);
         HWND combo = GetDlgItem(dialog, IDC_MOVE_MODE);
-        SendMessageW(combo, CB_ADDSTRING, 0, reinterpret_cast<LPARAM>(L"Preserve relative position"));
-        SendMessageW(combo, CB_ADDSTRING, 0, reinterpret_cast<LPARAM>(L"Center on destination"));
-        SendMessageW(combo, CB_ADDSTRING, 0, reinterpret_cast<LPARAM>(L"Move and maximize"));
+        SendMessageW(combo, CB_ADDSTRING, 0, reinterpret_cast<LPARAM>(Tr(wt::TextId::Preserve)));
+        SendMessageW(combo, CB_ADDSTRING, 0, reinterpret_cast<LPARAM>(Tr(wt::TextId::Center)));
+        SendMessageW(combo, CB_ADDSTRING, 0, reinterpret_cast<LPARAM>(Tr(wt::TextId::Maximize)));
         SendMessageW(combo, CB_SETCURSEL, static_cast<WPARAM>(g_settings.moveMode), 0);
         CheckDlgButton(dialog, IDC_RUN_AT_STARTUP, StartupEnabled() ? BST_CHECKED : BST_UNCHECKED);
         for (size_t i = 0; i < kActionCount; ++i) {
@@ -473,7 +568,7 @@ INT_PTR CALLBACK SettingsProc(HWND dialog, UINT message, WPARAM wparam, LPARAM) 
                 draft.shortcuts[i] = ReadHotkeyControl(dialog, kHotkeyControls[i]);
             }
             if (!wt::UniqueHotkeys(draft.shortcuts)) {
-                Warn(L"Shortcuts must be unique. Each enabled shortcut must include Ctrl, Alt or Shift.", dialog);
+                Warn(Tr(wt::TextId::WarnBadHotkey), dialog);
                 return TRUE;
             }
             size_t failure = 0;
@@ -483,12 +578,12 @@ INT_PTR CALLBACK SettingsProc(HWND dialog, UINT message, WPARAM wparam, LPARAM) 
             }
             UnregisterHotkeys();
             if (!SaveSettings(draft)) {
-                Warn(L"Could not save all settings to the current user's registry.", dialog);
+                Warn(Tr(wt::TextId::WarnCannotSave), dialog);
                 return TRUE;
             }
             const bool autostart = IsDlgButtonChecked(dialog, IDC_RUN_AT_STARTUP) == BST_CHECKED;
             if (autostart != StartupEnabled() && !SetStartup(autostart)) {
-                Warn(L"Could not update the Windows startup registry value.", dialog);
+                Warn(Tr(wt::TextId::WarnCannotAutostart), dialog);
                 return TRUE;
             }
             g_settings = draft;
@@ -508,7 +603,7 @@ void ShowSettings() {
     UnregisterHotkeys();
     DialogBoxParamW(g_instance, MAKEINTRESOURCEW(IDD_SETTINGS), g_window, SettingsProc, 0);
     size_t failure = 0;
-    if (!RegisterHotkeys(g_settings, &failure)) ReportHotkeyFailure(failure);
+    if (!RegisterHotkeys(g_settings, &failure, true)) ReportHotkeyFailure(failure);
     g_settingsDialogOpen = false;
 }
 
@@ -539,7 +634,10 @@ LRESULT CALLBACK WindowProc(HWND window, UINT message, WPARAM wparam, LPARAM lpa
     case WM_HOTKEY: {
         const int index = static_cast<int>(wparam) - kHotkeyBaseId;
         if (index >= 0 && index < static_cast<int>(kActionCount)) {
-            DispatchAction(static_cast<HotkeyIndex>(index), ActiveWindow());
+            const HWND target = ActiveWindow();
+            ++g_hotkeyMessages[static_cast<size_t>(index)];
+            g_hotkeyLastTargetValid[static_cast<size_t>(index)] = target != nullptr;
+            DispatchAction(static_cast<HotkeyIndex>(index), target);
         }
         return 0;
     }
@@ -555,8 +653,9 @@ LRESULT CALLBACK WindowProc(HWND window, UINT message, WPARAM wparam, LPARAM lpa
         case ID_TRAY_PREV: DispatchAction(Previous, g_trayTarget); break;
         case ID_TRAY_MINIMIZE: DispatchAction(Minimize, g_trayTarget); break;
         case ID_TRAY_SETTINGS: ShowSettings(); break;
+        case ID_TRAY_DIAGNOSTICS: ShowHotkeyDiagnostics(); break;
         case ID_TRAY_STARTUP:
-            if (!SetStartup(!StartupEnabled())) Warn(L"Could not update Windows startup.");
+            if (!SetStartup(!StartupEnabled())) Warn(Tr(wt::TextId::WarnCannotStartup));
             break;
         case ID_TRAY_EXIT: DestroyWindow(window); break;
         default: break;
@@ -578,6 +677,7 @@ LRESULT CALLBACK WindowProc(HWND window, UINT message, WPARAM wparam, LPARAM lpa
 
 int WINAPI wWinMain(_In_ HINSTANCE instance, _In_opt_ HINSTANCE, _In_ PWSTR, _In_ int) {
     g_instance = instance;
+    g_language = wt::LanguageForUiLang(GetUserDefaultUILanguage());
     g_mutex = CreateMutexW(nullptr, FALSE, kMutexName);
     if (!g_mutex) return 1;
     if (GetLastError() == ERROR_ALREADY_EXISTS) {

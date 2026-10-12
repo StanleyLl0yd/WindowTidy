@@ -10,6 +10,8 @@ A lightweight, portable Windows desktop window manager written in native C++20 a
 - **Minimize:** minimize the active window.
 - **Global hotkeys:** customize all five shortcuts in Settings.
 - **Tray application:** the approved Window Tidy icon in the executable, notification area and native Settings dialog.
+- **Language:** Russian UI when the current Windows display language is Russian (including regional variants); English for all other Windows display languages.
+- **Hotkey diagnostics:** the tray menu reports the registration status of every shortcut and the corresponding Win32 error code when registration fails.
 - **Windows Registry only:** no INI, JSON or local settings files.
 
 ### Default hotkeys
@@ -22,7 +24,7 @@ A lightweight, portable Windows desktop window manager written in native C++20 a
 | Previous monitor | Ctrl+Alt+Left |
 | Minimize active | Alt+H |
 
-Shortcuts are registered with Windows. If a shortcut is already owned by another app, Window Tidy reports the collision and keeps other, available shortcuts working. It does not intercept or inject keyboard input.
+Shortcuts are registered with Windows. If Windows or another application prevents registration, Window Tidy keeps all other available shortcuts working. Open **Hotkey diagnostics...** in the tray menu to see each current shortcut, its registered/unavailable/disabled status and the Win32 failure code. Reassign an unavailable shortcut in **Settings...**. A registered shortcut does not imply that Windows permits the target window operation. Window Tidy does not intercept or inject keyboard input.
 
 If Windows has already taken focus when you open the tray menu, window-specific actions are disabled rather than risking a change to an unrelated window. Use a global shortcut while the intended window is active.
 
@@ -49,6 +51,10 @@ scripts\build.cmd test
 GitHub Actions builds and tests on a Windows runner; successful runs publish a downloadable unsigned executable artifact. Do not treat an artifact as a released or digitally signed build.
 
 The application icon is embedded into the executable and notification-area icon. The canonical unmodified artwork is `res/WindowTidy.source.png`; `res/WindowTidy.ico` contains its raster-only Windows-sized derivatives (16, 20, 24, 32, 40, 48, 64, 96, 128 and 256 px). No external assets are needed at runtime.
+
+## Interface language
+
+On startup Window Tidy reads the **Windows user interface/display language**, not the keyboard layout or regional date/number format. Russian Windows UI selects Russian; every other Windows UI language selects English. Restart the application after changing the Windows display language. There is no language setting to maintain and no external translation file.
 
 ## Configuration
 

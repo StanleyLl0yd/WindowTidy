@@ -17,7 +17,15 @@
 - [x] Native Settings, hotkey collision handling, HKCU persistence and autostart.
 - [x] Command-line MSVC build and Windows CI logic tests.
 - [x] CI build passing with downloadable executable, embedded manifest and portable-runtime checks.
-- [ ] Complete interactive Windows GUI acceptance ([#2](https://github.com/StanleyLl0yd/WindowTidy/issues/2)) and address its findings before tagging a release.
+- [x] Publish portable v0.1.0 with approved icon and automated verification; the user-device acceptance was limited.
+- [ ] Complete the full Windows 10 and Windows 11 GUI acceptance matrix ([#2](https://github.com/StanleyLl0yd/WindowTidy/issues/2)), independently of limited releases.
+
+## Maintenance release 0.1.1
+
+- [x] Correct hotkey re-registration after Settings Save, retain bindings after Cancel, and add CI regression tests.
+- [x] Add automatic Russian/English UI localization and native per-shortcut diagnostics.
+- [x] Obtain positive owner verification of all app actions on a Windows desktop ([#10](https://github.com/StanleyLl0yd/WindowTidy/issues/10)).
+- [ ] Publish 0.1.1 as an explicitly limited-acceptance numbered release, while preserving issue #2 for full OS coverage.
 
 ## M1: Reliability
 

@@ -412,6 +412,16 @@ std::wstring HotkeyName(wt::Hotkey shortcut) {
     if (shortcut.mods & MOD_SHIFT) result += L"Shift+";
     if (shortcut.vk >= 'A' && shortcut.vk <= 'Z') {
         result += static_cast<wchar_t>(shortcut.vk);
+    } else if (shortcut.vk == VK_LEFT) {
+        result += L"Left";
+    } else if (shortcut.vk == VK_RIGHT) {
+        result += L"Right";
+    } else if (shortcut.vk == VK_UP) {
+        result += L"Up";
+    } else if (shortcut.vk == VK_DOWN) {
+        result += L"Down";
+    } else if (shortcut.vk >= VK_NUMPAD0 && shortcut.vk <= VK_NUMPAD9) {
+        result += L"Num " + std::to_wstring(shortcut.vk - VK_NUMPAD0);
     } else {
         wchar_t name[64]{};
         const UINT scan = MapVirtualKeyW(shortcut.vk, MAPVK_VK_TO_VSC_EX);
@@ -437,10 +447,15 @@ void ShowHotkeyDiagnostics() {
             report += Tr(wt::TextId::DiagnosticDisabled);
         } else {
             report += HotkeyName(shortcut);
-            report += L" - ";
-            report += Tr(g_hotkeyActive[i] ? wt::TextId::DiagnosticActive :
-                         wt::TextId::DiagnosticUnavailable);
-            if (!g_hotkeyActive[i] && g_hotkeyErrors[i] != 0) {
+            report += L" (";
+            report += Tr(wt::TextId::DiagnosticVirtualKey);
+            report += L"=" + std::to_wstring(shortcut.vk) + L") - ";
+            const wt::TextId state = g_settingsDialogOpen ? wt::TextId::DiagnosticSuspended :
+                                     g_hotkeyActive[i] ? wt::TextId::DiagnosticActive :
+                                     g_hotkeyErrors[i] != ERROR_SUCCESS ? wt::TextId::DiagnosticUnavailable :
+                                     wt::TextId::DiagnosticNotRegistered;
+            report += Tr(state);
+            if (g_hotkeyErrors[i] != ERROR_SUCCESS && !g_hotkeyActive[i]) {
                 report += L" (Win32: " + std::to_wstring(g_hotkeyErrors[i]) + L")";
             }
             report += L" [";

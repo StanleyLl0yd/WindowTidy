@@ -71,6 +71,8 @@ Settings g_settings{};
 wt::Language g_language = wt::Language::English;
 std::array<bool, kActionCount> g_hotkeyActive{};
 std::array<DWORD, kActionCount> g_hotkeyErrors{};
+std::array<unsigned, kActionCount> g_hotkeyMessages{};
+std::array<bool, kActionCount> g_hotkeyLastTargetValid{};
 std::vector<TidyEntry> g_tidied;
 
 const wchar_t* Tr(wt::TextId id) {
@@ -435,6 +437,15 @@ void ShowHotkeyDiagnostics() {
             if (!g_hotkeyActive[i] && g_hotkeyErrors[i] != 0) {
                 report += L" (Win32: " + std::to_wstring(g_hotkeyErrors[i]) + L")";
             }
+            report += L" [";
+            report += Tr(wt::TextId::DiagnosticMessages);
+            report += L" " + std::to_wstring(g_hotkeyMessages[i]);
+            if (g_hotkeyMessages[i] != 0) {
+                report += L", ";
+                report += Tr(g_hotkeyLastTargetValid[i] ? wt::TextId::DiagnosticTargetValid :
+                             wt::TextId::DiagnosticTargetInvalid);
+            }
+            report += L"]";
         }
     }
     report += L"\n";
@@ -623,7 +634,10 @@ LRESULT CALLBACK WindowProc(HWND window, UINT message, WPARAM wparam, LPARAM lpa
     case WM_HOTKEY: {
         const int index = static_cast<int>(wparam) - kHotkeyBaseId;
         if (index >= 0 && index < static_cast<int>(kActionCount)) {
-            DispatchAction(static_cast<HotkeyIndex>(index), ActiveWindow());
+            const HWND target = ActiveWindow();
+            ++g_hotkeyMessages[static_cast<size_t>(index)];
+            g_hotkeyLastTargetValid[static_cast<size_t>(index)] = target != nullptr;
+            DispatchAction(static_cast<HotkeyIndex>(index), target);
         }
         return 0;
     }

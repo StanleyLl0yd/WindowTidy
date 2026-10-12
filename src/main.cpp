@@ -397,24 +397,70 @@ void RemoveTray() {
 
 void ShowSettings();
 
+std::wstring HotkeyName(wt::Hotkey shortcut) {
+    std::wstring result;
+    if (shortcut.mods & MOD_CONTROL) result += L"Ctrl+";
+    if (shortcut.mods & MOD_ALT) result += L"Alt+";
+    if (shortcut.mods & MOD_SHIFT) result += L"Shift+";
+    if (shortcut.vk >= 'A' && shortcut.vk <= 'Z') {
+        result += static_cast<wchar_t>(shortcut.vk);
+    } else {
+        wchar_t name[64]{};
+        const UINT scan = MapVirtualKeyW(shortcut.vk, MAPVK_VK_TO_VSC_EX);
+        const LONG keyData = static_cast<LONG>(((scan & 0xffu) << 16u) |
+                                               ((scan & 0xff00u) ? (1u << 24u) : 0u));
+        if (GetKeyNameTextW(keyData, name, static_cast<int>(std::size(name))) > 0) {
+            result += name;
+        } else {
+            result += L"VK " + std::to_wstring(shortcut.vk);
+        }
+    }
+    return result;
+}
+
+void ShowHotkeyDiagnostics() {
+    std::wstring report = Tr(wt::TextId::DiagnosticIntro);
+    for (size_t i = 0; i < kActionCount; ++i) {
+        const auto shortcut = g_settings.shortcuts[i];
+        report += L"\n";
+        report += Tr(kHotkeyNames[i]);
+        report += L": ";
+        if (shortcut.vk == 0) {
+            report += Tr(wt::TextId::DiagnosticDisabled);
+        } else {
+            report += HotkeyName(shortcut);
+            report += L" - ";
+            report += Tr(g_hotkeyActive[i] ? wt::TextId::DiagnosticActive :
+                         wt::TextId::DiagnosticUnavailable);
+            if (!g_hotkeyActive[i] && g_hotkeyErrors[i] != 0) {
+                report += L" (Win32: " + std::to_wstring(g_hotkeyErrors[i]) + L")";
+            }
+        }
+    }
+    report += L"\n";
+    report += Tr(wt::TextId::DiagnosticAdvice);
+    MessageBoxW(g_window, report.c_str(), Tr(wt::TextId::DiagnosticTitle), MB_OK | MB_ICONINFORMATION);
+}
+
 void TrayMenu() {
     // Snapshot the foreground before our menu receives activation. Hotkeys use live foreground.
     g_trayTarget = ActiveWindow();
     HMENU menu = CreatePopupMenu();
     if (!menu) return;
-    AppendMenuW(menu, MF_STRING, ID_TRAY_TIDY, L"Tidy / Undo");
-    AppendMenuW(menu, MF_STRING, ID_TRAY_UNDO, L"Undo Tidy");
+    AppendMenuW(menu, MF_STRING, ID_TRAY_TIDY, Tr(wt::TextId::TrayTidy));
+    AppendMenuW(menu, MF_STRING, ID_TRAY_UNDO, Tr(wt::TextId::TrayUndo));
     AppendMenuW(menu, MF_SEPARATOR, 0, nullptr);
-    AppendMenuW(menu, MF_STRING, ID_TRAY_TOPMOST, L"Toggle always on top");
-    AppendMenuW(menu, MF_STRING, ID_TRAY_NEXT, L"Move to next monitor");
-    AppendMenuW(menu, MF_STRING, ID_TRAY_PREV, L"Move to previous monitor");
-    AppendMenuW(menu, MF_STRING, ID_TRAY_MINIMIZE, L"Minimize active window");
+    AppendMenuW(menu, MF_STRING, ID_TRAY_TOPMOST, Tr(wt::TextId::TrayTopmost));
+    AppendMenuW(menu, MF_STRING, ID_TRAY_NEXT, Tr(wt::TextId::TrayNext));
+    AppendMenuW(menu, MF_STRING, ID_TRAY_PREV, Tr(wt::TextId::TrayPrevious));
+    AppendMenuW(menu, MF_STRING, ID_TRAY_MINIMIZE, Tr(wt::TextId::TrayMinimize));
     AppendMenuW(menu, MF_SEPARATOR, 0, nullptr);
-    AppendMenuW(menu, MF_STRING, ID_TRAY_SETTINGS, L"Settings...");
+    AppendMenuW(menu, MF_STRING, ID_TRAY_SETTINGS, Tr(wt::TextId::TraySettings));
+    AppendMenuW(menu, MF_STRING, ID_TRAY_DIAGNOSTICS, Tr(wt::TextId::TrayDiagnostics));
     AppendMenuW(menu, MF_STRING | (StartupEnabled() ? MF_CHECKED : 0),
-                ID_TRAY_STARTUP, L"Start with Windows");
+                ID_TRAY_STARTUP, Tr(wt::TextId::TrayStartup));
     AppendMenuW(menu, MF_SEPARATOR, 0, nullptr);
-    AppendMenuW(menu, MF_STRING, ID_TRAY_EXIT, L"Exit");
+    AppendMenuW(menu, MF_STRING, ID_TRAY_EXIT, Tr(wt::TextId::TrayExit));
     if (g_tidied.empty()) EnableMenuItem(menu, ID_TRAY_UNDO, MF_BYCOMMAND | MF_GRAYED);
     if (!g_trayTarget) {
         for (const UINT command : {ID_TRAY_TIDY, ID_TRAY_TOPMOST, ID_TRAY_NEXT,
@@ -573,8 +619,9 @@ LRESULT CALLBACK WindowProc(HWND window, UINT message, WPARAM wparam, LPARAM lpa
         case ID_TRAY_PREV: DispatchAction(Previous, g_trayTarget); break;
         case ID_TRAY_MINIMIZE: DispatchAction(Minimize, g_trayTarget); break;
         case ID_TRAY_SETTINGS: ShowSettings(); break;
+        case ID_TRAY_DIAGNOSTICS: ShowHotkeyDiagnostics(); break;
         case ID_TRAY_STARTUP:
-            if (!SetStartup(!StartupEnabled())) Warn(L"Could not update Windows startup.");
+            if (!SetStartup(!StartupEnabled())) Warn(Tr(wt::TextId::WarnCannotStartup));
             break;
         case ID_TRAY_EXIT: DestroyWindow(window); break;
         default: break;

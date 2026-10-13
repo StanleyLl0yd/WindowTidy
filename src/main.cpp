@@ -49,8 +49,7 @@ struct Settings {
 };
 
 struct TidyEntry {
-    HWND hwnd{};
-    DWORD pid{};
+    wt::WindowIdentity identity{};
     bool maximized{};
 };
 struct TidyContext {
@@ -288,15 +287,16 @@ BOOL CALLBACK EnumerateTidy(HWND window, LPARAM param) {
     if (context->settings.onlyCurrentMonitor &&
         MonitorFromWindow(window, MONITOR_DEFAULTTONEAREST) != context->currentMonitor) return TRUE;
 
-    DWORD pid = 0;
-    GetWindowThreadProcessId(window, &pid);
+    const auto identity = wt::CaptureWindowIdentity(window);
+    if (!identity.hwnd) return TRUE;
     const bool wasMaximized = IsZoomed(window) != FALSE;
     ShowWindow(window, SW_MINIMIZE);
+    // A closed/reused HWND must not become a restore target or a failure record.
+    if (!wt::MatchesWindowIdentity(identity)) return TRUE;
     if (IsIconic(window)) {
-        g_tidied.push_back(TidyEntry{window, pid, wasMaximized});
+        g_tidied.push_back(TidyEntry{identity, wasMaximized});
     } else if (g_lastTidyFailures.size() < kMaxDiagnosticsWindows) {
-        const auto identity = wt::CaptureWindowIdentity(window);
-        if (identity.hwnd) g_lastTidyFailures.push_back(identity);
+        g_lastTidyFailures.push_back(identity);
     }
     return TRUE;
 }
@@ -312,11 +312,8 @@ void DoTidy(HWND target) {
 
 void UndoTidy() {
     for (const auto& entry : g_tidied) {
-        if (!IsWindow(entry.hwnd) || !IsIconic(entry.hwnd)) continue;
-        DWORD currentPid = 0;
-        GetWindowThreadProcessId(entry.hwnd, &currentPid);
-        if (currentPid != entry.pid) continue;
-        ShowWindow(entry.hwnd, entry.maximized ? SW_SHOWMAXIMIZED : SW_RESTORE);
+        if (!wt::MatchesWindowIdentity(entry.identity) || !IsIconic(entry.identity.hwnd)) continue;
+        ShowWindow(entry.identity.hwnd, entry.maximized ? SW_SHOWMAXIMIZED : SW_RESTORE);
     }
     g_tidied.clear();
 }

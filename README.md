@@ -69,7 +69,7 @@ Hotkeys and settings are per-user. Window Tidy does not require administrator pr
 - Explorer's notification-area overflow windows are excluded using their Win32 class names, including `TopLevelWindowForOverflowXamlIsland` on supported Windows configurations; Window Tidy does not treat them as application targets.
 - A failed move with `Win32: 5` indicates Windows denied access. This is not an invitation to disable UAC or run Window Tidy elevated. Unusual windows without `WS_MINIMIZEBOX` or `WS_CAPTION` remain excluded from the corresponding actions pending device validation.
 - Window diagnostics are a **hint**, not proof of access: a window that passes style checks may still reject Win32 operations because of permissions, process isolation or application-specific behavior. A failed minimization attempt is shown only after a Tidy pass on that window; no privilege bypass is attempted.
-- Undo is an in-memory, single-session operation and will not reopen closed applications.
+- Undo is an in-memory, single-session operation and will not reopen closed applications. Before restoring, it verifies the recorded window handle, process ID and thread ID still match the live window; this mitigates stale-handle mistakes but cannot make Win32 actions atomic.
 - Operations target an eligible foreground top-level window; some privileged, unusual or application-managed windows may reject movement or changes.
 - Multi-monitor placement uses the working area (excluding taskbars). Windows may enforce additional window-size limits.
 - Settings use the standard Windows hotkey control (Ctrl, Alt and Shift combinations); global Win-key shortcuts are not exposed by this control.

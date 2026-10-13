@@ -479,6 +479,20 @@ preserve the working behavior until the code is proven unnecessary.
 
 The final goal is a codebase containing only the complexity required to implement the project's current functionality: as small, clean, understandable, maintainable, and efficient as reasonably possible, without functional regressions.
 
+## Mandatory milestone exit gate (M1 and every later M stage)
+
+After the functional work and planned acceptance activities of **each milestone** (M1, M2, M3, M4, and every future M stage), but **before** declaring the milestone complete or moving to the next milestone:
+
+1. Open or use the milestone-specific exit-audit issue. Future milestones **must** receive such an issue when they are added to ROADMAP.md; existing issues: [M1 #22](https://github.com/StanleyLl0yd/WindowTidy/issues/22), [M2 #23](https://github.com/StanleyLl0yd/WindowTidy/issues/23), [M3 #24](https://github.com/StanleyLl0yd/WindowTidy/issues/24).
+2. Perform a **full, repository-wide audit, safe refactoring and code review**, following **all** requirements in the protocol above. This is an actual implementation task, not a high-level checklist or just a review of changed files.
+3. Complete both required **full passes**: the first audit/refactoring pass and the mandatory second pass over the already-refactored **entire** repository. Keep behavior-preserving changes separate from unrelated feature development.
+4. Fix identified bugs/regressions, implement every justified safe simplification, and record risky or intentionally deferred changes. Run applicable checks after each meaningful group of changes.
+5. Run the complete relevant validation suite on the final code: clean MSVC x64 build, /W4 /WX and /analyze, native logic/integration/regression tests, PE/manifest, unchanged approved icon, startup smoke and other applicable CI/security checks. Verify actual Windows 10/11 GUI outcomes separately; CI **never** substitutes for real desktop acceptance.
+6. Record a milestone-specific audit/code-review report with scope, findings, implemented changes, decisions to preserve code, test/CI evidence, limitations and reliable before/after measurements. Attach the report/PR and successful final-main CI evidence to the milestone exit issue.
+7. Only then mark the exit issue and milestone complete. Missing required audit/review evidence or failed verification **blocks** milestone closure. If a user-approved **limited-acceptance** release is published separately, document its limitations explicitly; it does not imply the milestone exit gate passed.
+
+This rule applies automatically to any future M stage, without requiring the owner to request another audit. Trigger is **completion of milestone work**, not an invented calendar date. It does not retroactively reclassify M0 or already published releases.
+
 ## App icon source artwork
 
 - When the project owner provides a new app icon as a PNG and identifies it as the app icon, treat that exact PNG as the canonical source artwork.

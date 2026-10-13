@@ -9,6 +9,17 @@
 - Never claim device testing on real monitors based solely on a CI result.
 - No public license has been selected.
 
+## Mandatory exit audits for every M stage
+
+The end of **M1 and every following milestone (M2, M3, M4, ...)** requires the mandatory whole-repository **audit + safe refactoring + code review** in [AGENTS.md](AGENTS.md), **after functional/acceptance work but before milestone closure or progression to the next M stage**. Each milestone must have a tracked, non-optional exit-audit issue, with two complete repository passes, concrete justified changes, full final-main CI/security/test verification, separate real-desktop acceptance evidence or explicitly BLOCKED cases, and a written final report. An issue cannot be checked off merely because a previous mid-stage audit was done.
+
+- **M1:** [#22](https://github.com/StanleyLl0yd/WindowTidy/issues/22)
+- **M2:** [#23](https://github.com/StanleyLl0yd/WindowTidy/issues/23)
+- **M3:** [#24](https://github.com/StanleyLl0yd/WindowTidy/issues/24)
+- **M4 and later:** create the corresponding exit-audit issue when adding the stage to this roadmap; use exactly the same mandatory gate.
+
+No calendar date is guessed; each audit is triggered by completing that stage's development and planned testing. Previously published limited-acceptance releases are not retrospectively altered.
+
 ## M0: Foundation / v0.1.0
 
 - [x] Create repository and initial documentation.
@@ -38,6 +49,7 @@
 - [ ] Verify elevated / protected / UWP window behavior.
 - [x] Add on-demand, read-only window-style diagnostics and memory-only results for unsuccessful Tidy attempts; no local log files (desktop confirmation still required).
 - [x] Add an explicit redacted Copy button for technical diagnostics (GUI clipboard confirmation A29 pending).
+- [ ] **M1 exit gate:** after M1 functional work and acceptance, execute the full two-pass repository audit, refactoring and code review; attach final report, reviewed PRs, final-main CI and GUI evidence to [#22](https://github.com/StanleyLl0yd/WindowTidy/issues/22) before marking M1 complete.
 
 ## M2: Quality of life and window arrangement (planned)
 
@@ -57,6 +69,7 @@ Win32 dependencies, command UX, one-step Undo semantics and acceptance gates are
 - [ ] Optional per-monitor Tidy filtering improvements (existing M2 feature, independent priority).
 - [x] Approved native app icon embedded into executable and tray (desktop visual acceptance remains open).
 - [ ] Other application polish and documentation for OS compatibility, permissions and troubleshooting.
+- [ ] **M2 exit gate:** after M2 functional work and acceptance, complete the full two-pass repository audit, refactoring and code review and attach evidence to [#23](https://github.com/StanleyLl0yd/WindowTidy/issues/23) before marking M2 complete.
 
 ## M3: Recoverable visibility and robustness (planned)
 
@@ -68,6 +81,7 @@ Owner-approved **Hide / Show window** action is intentionally separated from M2 
 - [ ] Prove recovery on normal Exit, restart and abnormal termination before shipping. An in-memory HWND list alone cannot restore hidden windows after a crash; evaluate a small HKCU recovery journal without window titles and validate HWND/PID/thread plus process lifetime before acting. If safe recovery is not feasible, keep Hide/Show deferred rather than strand windows.
 - [ ] Test repeated hide/show, closed/recreated windows, stale HWNDs, Explorer restart, elevated/other-user denials, DPI, monitor hot-plug and Windows 10/11 behavior. No new services, processes, injection, hooks, polling, telemetry or external libraries.
 - [ ] Finish remaining mixed-DPI, accessibility, hot-plug and cross-OS regression hardening before a stable milestone.
+- [ ] **M3 exit gate:** after M3 functional work and acceptance, complete the full two-pass repository audit, refactoring and code review and attach evidence to [#24](https://github.com/StanleyLl0yd/WindowTidy/issues/24) before marking M3 complete.
 
 **Ordering:** close M1 user tests A27-A29 and outstanding #2/#3 acceptance first; deliver/test M2 in small pieces (maximize/center, snap, then undo placement); settle M3 recovery architecture **before** implementing Hide. Each new action needs CI tests and separate real-desktop acceptance. These are tasks to plan, not authorization to implement now.
 

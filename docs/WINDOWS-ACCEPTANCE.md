@@ -59,6 +59,14 @@ After the owner's 2026-10-13 GUI feedback on main `2778956c`, the window picker,
 | --- | --- | --- |
 | A24 | Using the new **Window diagnostics...** tray command, inspect ADUC under another account, Telegram's mini-app window, and Task Manager. First run a Tidy pass with Notepad as the chosen foreground window, then inspect the read-only diagnostics before Undo. Compare reported style-based exclusions and any last-Tidy failed attempts with the actual state of each window. Record which windows appear, whether they have no minimize control, are tool/owned/topmost, or are style-eligible but still do not respond. | Diagnostics are displayed only when explicitly requested, in RU/EN, without log files, foreground polling, crashes or UI privilege escalation. 'Eligible by style' is not a promise an elevated or other-user process will allow actions. A skipped popup need not be force-minimized. Record OS edition/build and privilege context, and mark unsupported cases BLOCKED/FAIL rather than PASS. |
 
+## M1 A25: window-class and action outcome follow-up
+
+Owner's A24 observations on 2026-10-13: Telegram mini-app lacks minimize and caption styles (thus skipped by the current policy); Task Manager and ADUC from another user pass the Tidy style filter but remain unminimized after Tidy. The notification-area overflow shell surface unexpectedly appears among eligible titled windows. No personal titles, usernames, mail addresses or paths are copied from the user's report.
+
+| ID | Actions | Expected outcome |
+| --- | --- | --- |
+| A25 | Open new **Window diagnostics...** for Telegram mini-app, Task Manager, ADUC and notification overflow, and record only each window's **Class** (not private titles). Run direct Minimize and Next Monitor on Task Manager, reopen diagnostics and record any failure lines, with Win32 error codes where available. | Window classes distinguish genuine applications from shell popups. Minimize/Move outcomes are reported only for live matching HWND/PID/thread, with no logs or background queries. Failures are not silently reclassified as successful; no elevated rights or blanket force-hide behavior is introduced. |
+
 ## Post-test and release decision
 
 - Restore the original hotkeys, Tidy settings and exact autostart Run value, or delete test settings when using a disposable account. Exit Window Tidy.

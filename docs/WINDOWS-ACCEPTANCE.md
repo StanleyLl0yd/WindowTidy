@@ -98,6 +98,14 @@ Native Settings now uses unique translated Alt+letter mnemonics for all five hot
 | --- | --- | --- |
 | A28 | Open Settings with the keyboard. Use the displayed Alt+underlined-letter access keys on each hotkey label, both Tidy options, Move mode and autostart (use the matching input language where needed). Navigate using Tab/Shift+Tab, press Space on X to clear a hotkey, Enter to save, Esc to cancel, and repeat with a screen reader if available. | Each label focuses its adjacent hotkey control; checkboxes toggle; Move mode receives focus; saving persists, cancelling discards edits, and no conflicting mnemonics exist. Screen-reader naming of X clear buttons is separately pending and is **not** proven by CI. |
 
+## M1 A29: share diagnostics without private window titles
+
+The on-demand Window diagnostics dialog retains the normal local view, but adds **Copy without titles / Копировать без названий**. Only a direct user click invokes the Windows clipboard. The copied report retains class names, action eligibility and non-sensitive error codes, and replaces each window title with a constant placeholder. The Windows clipboard is accessible to other processes in the session; inspect the pasted report before sharing.
+
+| ID | Actions | Expected outcome |
+| --- | --- | --- |
+| A29 | Open Window diagnostics with a few windows whose titles include deliberately recognizable **non-sensitive dummy** document names. Click **Copy without titles**, paste into Notepad and inspect. Also test repeated copying and a locked clipboard if possible, on Russian and English UI. | Pasted report contains no window titles, dummy document names, usernames, e-mail addresses or file paths. It preserves class/status/error information, displays the copied confirmation, and reports clipboard errors without crashing or writing log files. The normal diagnostic view remains unchanged. |
+
 ## Post-test and release decision
 
 - Restore the original hotkeys, Tidy settings and exact autostart Run value, or delete test settings when using a disposable account. Exit Window Tidy.

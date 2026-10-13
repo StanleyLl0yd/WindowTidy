@@ -37,6 +37,7 @@
 - [x] Implement retry-based recovery of the notification icon after Explorer restarts (interactive acceptance remains in #2).
 - [ ] Verify elevated / protected / UWP window behavior.
 - [x] Add on-demand, read-only window-style diagnostics and memory-only results for unsuccessful Tidy attempts; no local log files (desktop confirmation still required).
+- [x] Add an explicit redacted Copy button for technical diagnostics (GUI clipboard confirmation A29 pending).
 
 ## M2: Quality of life
 

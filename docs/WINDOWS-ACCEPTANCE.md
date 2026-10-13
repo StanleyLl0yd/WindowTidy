@@ -82,6 +82,14 @@ A25 diagnostic behavior is confirmed for these scenarios; the *underlying except
 | --- | --- | --- |
 | A26 | With the overflow panel open and multiple ordinary app windows, start the newest build and inspect **Choose target window...** and **Window diagnostics...**. Attempt Tidy and explicit actions for ordinary windows. In Task Manager's diagnostic failure, check the localized message for `Win32: 5`. | `TopLevelWindowForOverflowXamlIsland` is absent from all target lists. Ordinary application actions remain functional. An access-denied message is explained without elevation or access-control bypass. If an unsupported app is skipped, it is not mistaken for a successful action. |
 
+## M1 A27: Tidy restore identity guard
+
+The user accepted A26 on 2026-10-13 with three PASS results on `7d93bc46`: XAML notification overflow excluded from chooser and diagnostics, localized Win32 access-denied explanation confirmed on Task Manager, and ordinary minimize/restore/move actions still working. The A26 report does not establish Windows 10 and 11 coverage.
+
+| ID | Actions | Expected outcome |
+| --- | --- | --- |
+| A27 | Open Notepad A and B, use Tidy to minimize B, close B from the taskbar while minimized, then create a new window (including another Notepad window) and invoke Undo. Repeat with a minimized normal and a maximized window, without closing them. | Undo never restores or acts on an unrelated newly opened window. Remaining matching windows restore, preserving prior maximized state. The identity guard checks HWND, PID, and thread ID, though Win32 handles can theoretically be reused within the same thread; no absolute atomicity is claimed. |
+
 ## Post-test and release decision
 
 - Restore the original hotkeys, Tidy settings and exact autostart Run value, or delete test settings when using a disposable account. Exit Window Tidy.

@@ -85,6 +85,13 @@ std::array<unsigned, kActionCount> g_hotkeyMessages{};
 std::array<bool, kActionCount> g_hotkeyLastTargetValid{};
 std::vector<TidyEntry> g_tidied;
 std::vector<wt::WindowIdentity> g_lastTidyFailures; // Handles only; window titles are not cached.
+wt::WindowIdentity g_lastMinimizeFailure{};
+struct MoveFailure {
+    wt::WindowIdentity target{};
+    DWORD error{};
+    bool targetMonitorNotReached{};
+};
+MoveFailure g_lastMoveFailure{};
 
 const wchar_t* Tr(wt::TextId id) {
     return wt::Text(id, g_language);
@@ -331,9 +338,11 @@ void ToggleTopmost(HWND target) {
 }
 
 void MinimizeWindow(HWND target) {
+    g_lastMinimizeFailure = {};
     if (!EligibleWindow(target) || IsIconic(target)) return;
     if ((GetWindowLongPtrW(target, GWL_STYLE) & WS_MINIMIZEBOX) == 0) return;
     ShowWindow(target, SW_MINIMIZE);
+    if (!IsIconic(target)) g_lastMinimizeFailure = wt::CaptureWindowIdentity(target);
 }
 
 BOOL CALLBACK EnumerateMonitors(HMONITOR handle, HDC, LPRECT, LPARAM param) {
@@ -347,6 +356,7 @@ BOOL CALLBACK EnumerateMonitors(HMONITOR handle, HDC, LPRECT, LPARAM param) {
 }
 
 void MoveWindowToMonitor(HWND target, int direction) {
+    g_lastMoveFailure = {};
     if (!EligibleWindow(target) || IsIconic(target)) return;
     const LONG_PTR style = GetWindowLongPtrW(target, GWL_STYLE);
     if (!wt::CanMoveByStyle(style)) return;
@@ -389,8 +399,14 @@ void MoveWindowToMonitor(HWND target, int direction) {
     const BOOL moved = SetWindowPos(target, nullptr, desired.left, desired.top,
                                     wt::Width(desired), wt::Height(desired),
                                     SWP_NOZORDER | SWP_NOACTIVATE | SWP_NOOWNERZORDER);
+    const DWORD error = moved ? ERROR_SUCCESS : GetLastError();
     if (maximized || (moved && g_settings.moveMode == MoveMode::Maximize)) {
         ShowWindow(target, SW_MAXIMIZE);
+    }
+    if (!moved || MonitorFromWindow(target, MONITOR_DEFAULTTONEAREST) != monitors[to].handle) {
+        g_lastMoveFailure = MoveFailure{
+            wt::CaptureWindowIdentity(target), error, moved != FALSE
+        };
     }
 }
 
@@ -538,6 +554,8 @@ BOOL CALLBACK EnumerateWindowDiagnostics(HWND window, LPARAM param) {
     const LONG_PTR style = GetWindowLongPtrW(window, GWL_STYLE);
     const LONG_PTR extended = GetWindowLongPtrW(window, GWL_EXSTYLE);
     const bool minimized = IsIconic(window) != FALSE;
+    wchar_t className[128]{};
+    const bool classKnown = GetClassNameW(window, className, static_cast<int>(std::size(className))) > 0;
     const auto reason = wt::ClassifyTidyStyle(style, extended,
                           GetWindow(window, GW_OWNER) != nullptr, g_settings.skipTopmost);
     const bool attemptedAndFailed = std::any_of(g_lastTidyFailures.begin(), g_lastTidyFailures.end(),
@@ -557,6 +575,23 @@ BOOL CALLBACK EnumerateWindowDiagnostics(HWND window, LPARAM param) {
     scan.report += minimized ? Tr(wt::TextId::WindowDiagAlreadyMinimized) :
                    wt::CanMoveByStyle(style) ? Tr(wt::TextId::WindowDiagReady) :
                    Tr(wt::TextId::WindowDiagMoveNoCaption);
+    scan.report += L"\r\n";
+    scan.report += Tr(wt::TextId::WindowDiagClass);
+    scan.report += L": ";
+    scan.report += classKnown ? className : L"?";
+    if (g_lastMinimizeFailure.hwnd == window &&
+        wt::MatchesWindowIdentity(g_lastMinimizeFailure) && !minimized) {
+        scan.report += L"\r\n";
+        scan.report += Tr(wt::TextId::WindowDiagMinimizeFailed);
+    }
+    if (g_lastMoveFailure.target.hwnd == window &&
+        wt::MatchesWindowIdentity(g_lastMoveFailure.target)) {
+        scan.report += L"\r\n";
+        scan.report += Tr(g_lastMoveFailure.targetMonitorNotReached
+            ? wt::TextId::WindowDiagMoveDidNotReach : wt::TextId::WindowDiagMoveRejected);
+        if (g_lastMoveFailure.error != ERROR_SUCCESS)
+            scan.report += L" (Win32: " + std::to_wstring(g_lastMoveFailure.error) + L")";
+    }
     scan.report += L"\r\n\r\n";
     return TRUE;
 }

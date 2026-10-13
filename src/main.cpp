@@ -554,15 +554,9 @@ BOOL CALLBACK EnumerateWindowDiagnostics(HWND window, LPARAM param) {
         });
 
     scan.report += std::to_wstring(++scan.listed) + L". ";
-    if (scan.redactTitles) {
-        scan.report += Tr(wt::TextId::WindowDiagHiddenTitle);
-    } else {
-        std::wstring title(name, static_cast<size_t>(length));
-        for (auto& character : title) {
-            if (character < L' ') character = L' ';
-        }
-        scan.report += title;
-    }
+    scan.report += wt::DiagnosticWindowTitle(
+        std::wstring_view(name, static_cast<size_t>(length)), scan.redactTitles,
+        Tr(wt::TextId::WindowDiagHiddenTitle));
     scan.report += L"\r\n";
     scan.report += Tr(wt::TextId::WindowDiagTidy);
     scan.report += L": ";

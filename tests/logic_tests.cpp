@@ -13,6 +13,11 @@ int main() {
     assert(SafeMenuLabel(L"Notes & tasks") == L"Notes && tasks");
     assert(SafeMenuLabel(L"Title\tCtrl+K\n") == L"Title Ctrl+K ");
     assert(SafeMenuLabel(L"") == L"");
+    // Shared window-report redaction must not include any user-supplied title text.
+    assert(DiagnosticWindowTitle(L"private@example.invalid", true, L"[hidden]") == L"[hidden]");
+    assert(DiagnosticWindowTitle(L"C:\\Test\\private.txt", true, L"[hidden]") == L"[hidden]");
+    assert(DiagnosticWindowTitle(L"Title\tsecond line\n", false, L"[hidden]") == L"Title second line ");
+    assert(DiagnosticWindowTitle(L"", true, L"[hidden]") == L"[hidden]");
     // Native dialog accelerators must be present and unique in both translations.
     constexpr std::array settingsLabels{
         TextId::TidyLabel, TextId::TopmostLabel, TextId::NextLabel,

@@ -39,12 +39,36 @@
 - [x] Add on-demand, read-only window-style diagnostics and memory-only results for unsuccessful Tidy attempts; no local log files (desktop confirmation still required).
 - [x] Add an explicit redacted Copy button for technical diagnostics (GUI clipboard confirmation A29 pending).
 
-## M2: Quality of life
+## M2: Quality of life and window arrangement (planned)
 
-- [ ] Optional per-application exclusion rules in the registry.
-- [ ] Optional per-monitor Tidy filtering improvements.
-- [x] Approved native app icon embedded into the executable and tray (desktop visual acceptance remains open).
-- [ ] Other application polish.
-- [ ] Documentation for supported OS versions, permissions and troubleshooting.
+Owner-approved planning scope (2026-10-13), **not implemented**. Proposed numeric version target: 0.3.0, not a release commitment.
+
+Win32 dependencies, command UX, one-step Undo semantics and acceptance gates are detailed in [docs/M2-M3-WINDOW-ACTIONS.md](docs/M2-M3-WINDOW-ACTIONS.md).
+
+- [ ] **Maximize / Restore** a selected eligible window using native show-state semantics, without affecting other windows or its topmost status.
+- [ ] **Center** a selected window within its current monitor's working area (taskbar-aware), retaining its size when possible.
+- [ ] **Snap** to left/right halves or one of four quarters of the target monitor's working area. This is Window Tidy placement, not Windows Snap Groups integration.
+- [ ] **Undo placement**: one-step, per-window reversal of the last successful Window Tidy placement action (including existing next/previous monitor Move once integrated). Keep this separate from **Undo Tidy**, which restores minimized windows. Do not undo a user's later manual move unexpectedly.
+- [ ] Tray UX: add a compact **Arrange / Разместить** submenu under explicitly chosen windows, plus Maximize/Restore and Undo placement. Preserve the five existing hotkeys and their defaults; do not add new global shortcuts automatically.
+- [ ] Reuse Win32 `SetWindowPos`, `ShowWindow`, `GetWindowPlacement` / `SetWindowPlacement`, `MonitorFromWindow` and `MONITORINFO.rcWork`, plus current C++20 geometry and HWND/PID/thread checks. No additional dependencies or elevated access.
+- [ ] Keep workspace-coordinate `WINDOWPLACEMENT.rcNormalPosition` separate from screen coordinates passed to `SetWindowPos`. Only save Undo state on verified success; discard stale window identity and stale placements.
+- [ ] Add pure geometry/state tests and real Windows 10/11 tests for odd pixels, taskbar edges, portrait, negative coordinates, mixed DPI, maximized/minimized states, non-resizable/app-minimum-size windows, permission denials and menu keyboard navigation.
+- [ ] Optional per-application exclusion rules in HKCU Registry (existing M2 feature, independent priority).
+- [ ] Optional per-monitor Tidy filtering improvements (existing M2 feature, independent priority).
+- [x] Approved native app icon embedded into executable and tray (desktop visual acceptance remains open).
+- [ ] Other application polish and documentation for OS compatibility, permissions and troubleshooting.
+
+## M3: Recoverable visibility and robustness (planned)
+
+Owner-approved **Hide / Show window** action is intentionally separated from M2 because hidden windows disappear from the current visible-only target picker. Proposed numeric version target: 0.4.0, not a release commitment.
+
+- [ ] **Hide selected window** only for explicitly selected, eligible ordinary windows; never hide shell/taskbar/desktop or broadly target owned/modal, protected or unknown popups.
+- [ ] **Show hidden windows... / Показать скрытые окна...** in the tray, separate from visible-window selection, listing only windows previously hidden by Window Tidy. Provide a safe bounded recovery path, including a restore-all option if validated.
+- [ ] Distinguish Hide/Show state from **Undo Tidy** and **Undo placement**. Preserve prior normal/maximized presentation; avoid forced foreground activation where possible.
+- [ ] Prove recovery on normal Exit, restart and abnormal termination before shipping. An in-memory HWND list alone cannot restore hidden windows after a crash; evaluate a small HKCU recovery journal without window titles and validate HWND/PID/thread plus process lifetime before acting. If safe recovery is not feasible, keep Hide/Show deferred rather than strand windows.
+- [ ] Test repeated hide/show, closed/recreated windows, stale HWNDs, Explorer restart, elevated/other-user denials, DPI, monitor hot-plug and Windows 10/11 behavior. No new services, processes, injection, hooks, polling, telemetry or external libraries.
+- [ ] Finish remaining mixed-DPI, accessibility, hot-plug and cross-OS regression hardening before a stable milestone.
+
+**Ordering:** close M1 user tests A27-A29 and outstanding #2/#3 acceptance first; deliver/test M2 in small pieces (maximize/center, snap, then undo placement); settle M3 recovery architecture **before** implementing Hide. Each new action needs CI tests and separate real-desktop acceptance. These are tasks to plan, not authorization to implement now.
 
 No additional features will be introduced into M0 at the expense of basic reliability.

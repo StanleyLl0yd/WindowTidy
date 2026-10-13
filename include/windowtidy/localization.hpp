@@ -81,10 +81,14 @@ enum class TextId {
     WindowDiagTruncated,
     WindowDiagFooter,
     WindowDiagClose,
+    WindowDiagClass,
+    WindowDiagMinimizeFailed,
+    WindowDiagMoveRejected,
+    WindowDiagMoveDidNotReach,
 };
 
 struct Translation { const wchar_t* english; const wchar_t* russian; };
-inline constexpr std::array<Translation, 70> kTranslations{{
+inline constexpr std::array<Translation, 74> kTranslations{{
     {L"Window Tidy Settings", L"Настройки Window Tidy"},
     {L"Global hotkeys", L"Глобальные горячие клавиши"},
     {L"Tidy / Undo:", L"Свернуть / вернуть:"},
@@ -154,11 +158,15 @@ inline constexpr std::array<Translation, 70> kTranslations{{
     {L"no standard title bar", L"нет стандартного заголовка"},
     {L"No eligible titled windows found.\r\n", L"Подходящие окна с заголовками не найдены.\r\n"},
     {L"More windows not shown.\r\n", L"Остальные окна не показаны.\r\n"},
-    {L"\r\nAn eligible window can still reject an action (e.g. elevated or different-user applications). Tidy also keeps the chosen app and may exclude other monitors. Results from the last Tidy are memory-only. No titles are saved to disk.",
-     L"\r\nДаже подходящее окно может не разрешить действие (например, при повышенных правах или другом пользователе). Tidy также сохраняет выбранное приложение и может исключать другие мониторы. Результаты последнего Tidy хранятся только в памяти. Заголовки не записываются на диск."},
+    {L"\r\nStyle checks do not prove permission to control elevated or other-user windows. Diagnostics are memory-only. Redact personal window titles before sharing.",
+     L"\r\nПроверка свойств окна не доказывает наличие прав на управление окнами другого пользователя или повышенного процесса. Диагностика хранится только в памяти. Перед отправкой скрывайте личные данные в заголовках."},
     {L"Close", L"Закрыть"},
+    {L"Class", L"Класс"},
+    {L"Last direct minimize attempt did not minimize this window", L"Последняя попытка прямого сворачивания не сработала"},
+    {L"Last monitor move failed", L"Последнее перемещение не удалось"},
+    {L"Last monitor move did not reach the requested monitor", L"Последнее перемещение не перенесло окно на нужный монитор"},
 }};
-static_assert(kTranslations.size() == static_cast<std::size_t>(TextId::WindowDiagClose) + 1);
+static_assert(kTranslations.size() == static_cast<std::size_t>(TextId::WindowDiagMoveDidNotReach) + 1);
 
 constexpr const wchar_t* Text(TextId id, Language language) noexcept {
     const auto& item = kTranslations[static_cast<std::size_t>(id)];

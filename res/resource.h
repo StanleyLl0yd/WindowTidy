@@ -2,6 +2,8 @@
 
 #define IDI_WINDOWTIDY           100
 #define IDD_SETTINGS              101
+#define IDD_WINDOW_DIAGNOSTICS    102
+#define IDC_WINDOW_REPORT        1120
 #define IDC_HK_TIDY               1001
 #define IDC_HK_TOPMOST            1002
 #define IDC_HK_NEXT               1003
@@ -40,4 +42,5 @@
 #define ID_TRAY_STARTUP           40008
 #define ID_TRAY_EXIT              40009
 #define ID_TRAY_DIAGNOSTICS       40010
+#define ID_TRAY_WINDOW_DIAGNOSTICS 40011
 #define ID_TRAY_TARGET_BASE       42000

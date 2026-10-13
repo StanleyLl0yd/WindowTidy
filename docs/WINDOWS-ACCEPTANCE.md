@@ -51,6 +51,14 @@ Record each case as **PASS**, **FAIL**, or **BLOCKED** for **each OS**. For FAIL
 | A22 | Open an ordinary titled window, right-click Window Tidy in the tray when Explorer has focus, open **Choose target window...**, then choose the intended window and an action. Repeat after closing or hiding that target, and test with two similarly titled windows. | Targeted operation affects only the explicitly selected still-eligible window. If its HWND/PID/thread changes or it is no longer eligible, the operation is safely ignored. No application other than the selected target is manipulated. The original direct commands remain safely unavailable when no foreground target can be proven. |
 | A23 | Inspect the picker with many open windows, a modal dialogue, Windows Terminal, an elevated window, and a window with no title. Also test keyboard-only menu navigation. | The picker lists a bounded, on-demand set of titled visible windows without stale entries; nonstandard or inaccessible windows do not hang/crash the tray or redirect operations. Document any omitted or unsupported window type instead of marking it PASS automatically. |
 
+## M1 window diagnostics retest (A24)
+
+After the owner's 2026-10-13 GUI feedback on main `2778956c`, the window picker, topmost toggle, normal minimize and monitor moves, duplicate titles, large menu, keyboard menu navigation and regression checks all passed on one desktop. Tidy missed an ADUC snap-in launched under another user and a Telegram mini-app; Task Manager did not minimize or move. Closing a target while the tray menu is open was not tested. These are **partial** desktop observations with the OS version still unspecified, not evidence of full A22/A23 or #2 acceptance.
+
+| ID | Actions | Expected outcome |
+| --- | --- | --- |
+| A24 | Using the new **Window diagnostics...** tray command, inspect ADUC under another account, Telegram's mini-app window, and Task Manager. First run a Tidy pass with Notepad as the chosen foreground window, then inspect the read-only diagnostics before Undo. Compare reported style-based exclusions and any last-Tidy failed attempts with the actual state of each window. Record which windows appear, whether they have no minimize control, are tool/owned/topmost, or are style-eligible but still do not respond. | Diagnostics are displayed only when explicitly requested, in RU/EN, without log files, foreground polling, crashes or UI privilege escalation. 'Eligible by style' is not a promise an elevated or other-user process will allow actions. A skipped popup need not be force-minimized. Record OS edition/build and privilege context, and mark unsupported cases BLOCKED/FAIL rather than PASS. |
+
 ## Post-test and release decision
 
 - Restore the original hotkeys, Tidy settings and exact autostart Run value, or delete test settings when using a disposable account. Exit Window Tidy.

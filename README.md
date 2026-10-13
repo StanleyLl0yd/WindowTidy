@@ -12,6 +12,7 @@ A lightweight, portable Windows desktop window manager written in native C++20 a
 - **Tray application:** the approved Window Tidy icon in the executable, notification area and native Settings dialog.
 - **Language:** Russian UI when the current Windows display language is Russian (including regional variants); English for all other Windows display languages.
 - **Hotkey diagnostics:** the tray menu reports the registration status of every shortcut and the corresponding Win32 error code when registration fails.
+- **Window diagnostics:** the tray menu can inspect up to 24 visible titled windows on demand and explain why Tidy or Move might skip them. Failed Tidy attempts are recorded by window identity in memory, without saving titles or files.
 - **Windows Registry only:** no INI, JSON or local settings files.
 
 ### Default hotkeys
@@ -64,7 +65,8 @@ Hotkeys and settings are per-user. Window Tidy does not require administrator pr
 
 ## Safety and limitations
 
-- Tidy ignores desktop/taskbar, hidden, cloaked, minimized, non-minimizable and tool windows; it does not force-close anything.
+- Tidy ignores desktop/taskbar, hidden, cloaked, minimized, non-minimizable, owned/popup and tool windows; it does not force-close anything. Depending on settings, topmost or other-monitor windows are excluded.
+- Window diagnostics are a **hint**, not proof of access: a window that passes style checks may still reject Win32 operations because of permissions, process isolation or application-specific behavior. A failed minimization attempt is shown only after a Tidy pass on that window; no privilege bypass is attempted.
 - Undo is an in-memory, single-session operation and will not reopen closed applications.
 - Operations target an eligible foreground top-level window; some privileged, unusual or application-managed windows may reject movement or changes.
 - Multi-monitor placement uses the working area (excluding taskbars). Windows may enforce additional window-size limits.

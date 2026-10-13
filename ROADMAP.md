@@ -32,7 +32,8 @@
 - [ ] Real-desktop tests for mixed scaling, multiple taskbar positions, portrait displays and hot-plug.
 - [x] Add explicit on-demand window selection to tray operations; no focus guessing, keyboard hooks or polling ([#3](https://github.com/StanleyLl0yd/WindowTidy/issues/3)).
 - [ ] Verify that picker against real Explorer/taskbar focus scenarios, protected and nonstandard windows, and accessibility before closing #3.
-- [ ] Accessibility and keyboard-only Settings workflow.
+- [x] Add unique localized Settings keyboard accelerators, with native tests.
+- [ ] Verify keyboard-only Settings workflow and accessible X-button names on actual Windows desktops (A28).
 - [x] Implement retry-based recovery of the notification icon after Explorer restarts (interactive acceptance remains in #2).
 - [ ] Verify elevated / protected / UWP window behavior.
 - [x] Add on-demand, read-only window-style diagnostics and memory-only results for unsuccessful Tidy attempts; no local log files (desktop confirmation still required).

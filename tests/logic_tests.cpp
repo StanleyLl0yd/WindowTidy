@@ -30,6 +30,15 @@ int main() {
     assert(!MatchesWindowIdentity(wrongThread));
     assert(DestroyWindow(probe));
     assert(!MatchesWindowIdentity(identity));
+    assert(IsShellClass(L"TopLevelWindowForOverflowXamlIsland"));
+    assert(IsShellClass(L"NotifyIconOverflowWindow"));
+    assert(IsShellClass(L"Shell_TrayWnd"));
+    assert(IsShellClass(L"shell_traywnd"));
+    assert(IsShellClass(L"Shell_SecondaryTrayWnd"));
+    assert(!IsShellClass(L"TaskManagerWindow"));
+    assert(!IsShellClass(L"MMCMainFrame"));
+    assert(!IsShellClass(L"Qt51519QWindow"));
+    assert(!IsShellClass(L"Chrome_WidgetWin_1"));
     static_assert(ClassifyTidyStyle(WS_MINIMIZEBOX, 0, false, true) == TidyStyleReason::Eligible);
     static_assert(ClassifyTidyStyle(0, 0, false, false) == TidyStyleReason::NoMinimizeButton);
     static_assert(ClassifyTidyStyle(WS_MINIMIZEBOX, WS_EX_TOOLWINDOW, false, false) == TidyStyleReason::ToolWindow);

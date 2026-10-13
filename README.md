@@ -66,6 +66,8 @@ Hotkeys and settings are per-user. Window Tidy does not require administrator pr
 ## Safety and limitations
 
 - Tidy ignores desktop/taskbar, hidden, cloaked, minimized, non-minimizable, owned/popup and tool windows; it does not force-close anything. Depending on settings, topmost or other-monitor windows are excluded.
+- Explorer's notification-area overflow windows are excluded using their Win32 class names, including `TopLevelWindowForOverflowXamlIsland` on supported Windows configurations; Window Tidy does not treat them as application targets.
+- A failed move with `Win32: 5` indicates Windows denied access. This is not an invitation to disable UAC or run Window Tidy elevated. Unusual windows without `WS_MINIMIZEBOX` or `WS_CAPTION` remain excluded from the corresponding actions pending device validation.
 - Window diagnostics are a **hint**, not proof of access: a window that passes style checks may still reject Win32 operations because of permissions, process isolation or application-specific behavior. A failed minimization attempt is shown only after a Tidy pass on that window; no privilege bypass is attempted.
 - Undo is an in-memory, single-session operation and will not reopen closed applications.
 - Operations target an eligible foreground top-level window; some privileged, unusual or application-managed windows may reject movement or changes.

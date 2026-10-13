@@ -208,12 +208,8 @@ bool SetStartup(bool enabled) {
 
 bool IsShellWindow(HWND window) {
     wchar_t name[96]{};
-    if (!GetClassNameW(window, name, static_cast<int>(std::size(name)))) return true;
-    return _wcsicmp(name, L"Shell_TrayWnd") == 0 ||
-           _wcsicmp(name, L"Shell_SecondaryTrayWnd") == 0 ||
-           _wcsicmp(name, L"Progman") == 0 ||
-           _wcsicmp(name, L"WorkerW") == 0 ||
-           _wcsicmp(name, L"NotifyIconOverflowWindow") == 0;
+    return GetClassNameW(window, name, static_cast<int>(std::size(name))) == 0 ||
+           wt::IsShellClass(name);
 }
 
 bool IsCloaked(HWND window) {
@@ -589,8 +585,13 @@ BOOL CALLBACK EnumerateWindowDiagnostics(HWND window, LPARAM param) {
         scan.report += L"\r\n";
         scan.report += Tr(g_lastMoveFailure.targetMonitorNotReached
             ? wt::TextId::WindowDiagMoveDidNotReach : wt::TextId::WindowDiagMoveRejected);
-        if (g_lastMoveFailure.error != ERROR_SUCCESS)
+        if (g_lastMoveFailure.error != ERROR_SUCCESS) {
             scan.report += L" (Win32: " + std::to_wstring(g_lastMoveFailure.error) + L")";
+            if (g_lastMoveFailure.error == ERROR_ACCESS_DENIED) {
+                scan.report += L" - ";
+                scan.report += Tr(wt::TextId::WindowDiagAccessDenied);
+            }
+        }
     }
     scan.report += L"\r\n\r\n";
     return TRUE;

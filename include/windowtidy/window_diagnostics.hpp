@@ -1,7 +1,19 @@
 #pragma once
 #include <windows.h>
+#include <cwchar>
 
 namespace wt {
+// Exact Win32 class names, never localized titles. Explorer uses two overflow classes
+// across Windows versions; other shell classes are not application targets.
+inline bool IsShellClass(const wchar_t* name) noexcept {
+    return _wcsicmp(name, L"Shell_TrayWnd") == 0 ||
+           _wcsicmp(name, L"Shell_SecondaryTrayWnd") == 0 ||
+           _wcsicmp(name, L"Progman") == 0 ||
+           _wcsicmp(name, L"WorkerW") == 0 ||
+           _wcsicmp(name, L"NotifyIconOverflowWindow") == 0 ||
+           _wcsicmp(name, L"TopLevelWindowForOverflowXamlIsland") == 0;
+}
+
 enum class TidyStyleReason {
     Eligible,
     NoMinimizeButton,

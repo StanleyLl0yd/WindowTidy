@@ -4,6 +4,7 @@
 #define IDD_SETTINGS              101
 #define IDD_WINDOW_DIAGNOSTICS    102
 #define IDC_WINDOW_REPORT        1120
+#define IDC_COPY_REPORT          1121
 #define IDC_HK_TIDY               1001
 #define IDC_HK_TOPMOST            1002
 #define IDC_HK_NEXT               1003

@@ -86,10 +86,14 @@ enum class TextId {
     WindowDiagMoveRejected,
     WindowDiagMoveDidNotReach,
     WindowDiagAccessDenied,
+    WindowDiagHiddenTitle,
+    WindowDiagCopy,
+    WindowDiagCopied,
+    WindowDiagCopyFailed,
 };
 
 struct Translation { const wchar_t* english; const wchar_t* russian; };
-inline constexpr std::array<Translation, 75> kTranslations{{
+inline constexpr std::array<Translation, 79> kTranslations{{
     {L"Window Tidy Settings", L"Настройки Window Tidy"},
     {L"Global hotkeys", L"Глобальные горячие клавиши"},
     {L"&Tidy / Undo:", L"С&вернуть / вернуть:"},
@@ -167,8 +171,12 @@ inline constexpr std::array<Translation, 75> kTranslations{{
     {L"Last monitor move failed", L"Последнее перемещение не удалось"},
     {L"Last monitor move did not reach the requested monitor", L"Последнее перемещение не перенесло окно на нужный монитор"},
     {L"access denied by Windows", L"Windows отказала в доступе"},
+    {L"[window title hidden]", L"[название скрыто]"},
+    {L"Copy without titles", L"Копировать без названий"},
+    {L"Copied", L"Скопировано"},
+    {L"Could not copy the report to the clipboard.", L"Не удалось скопировать отчёт в буфер обмена."},
 }};
-static_assert(kTranslations.size() == static_cast<std::size_t>(TextId::WindowDiagAccessDenied) + 1);
+static_assert(kTranslations.size() == static_cast<std::size_t>(TextId::WindowDiagCopyFailed) + 1);
 
 constexpr const wchar_t* Text(TextId id, Language language) noexcept {
     const auto& item = kTranslations[static_cast<std::size_t>(id)];

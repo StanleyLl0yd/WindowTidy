@@ -527,6 +527,7 @@ struct WindowDiagnosticScan {
     std::wstring report;
     size_t listed{};
     bool truncated{};
+    bool redactTitles{};
 };
 
 BOOL CALLBACK EnumerateWindowDiagnostics(HWND window, LPARAM param) {
@@ -540,10 +541,6 @@ BOOL CALLBACK EnumerateWindowDiagnostics(HWND window, LPARAM param) {
         return FALSE;
     }
 
-    std::wstring title(name, static_cast<size_t>(length));
-    for (auto& character : title) {
-        if (character < L' ') character = L' ';
-    }
     const LONG_PTR style = GetWindowLongPtrW(window, GWL_STYLE);
     const LONG_PTR extended = GetWindowLongPtrW(window, GWL_EXSTYLE);
     const bool minimized = IsIconic(window) != FALSE;
@@ -556,7 +553,17 @@ BOOL CALLBACK EnumerateWindowDiagnostics(HWND window, LPARAM param) {
             return id.hwnd == window && wt::MatchesWindowIdentity(id);
         });
 
-    scan.report += std::to_wstring(++scan.listed) + L". " + title + L"\r\n";
+    scan.report += std::to_wstring(++scan.listed) + L". ";
+    if (scan.redactTitles) {
+        scan.report += Tr(wt::TextId::WindowDiagHiddenTitle);
+    } else {
+        std::wstring title(name, static_cast<size_t>(length));
+        for (auto& character : title) {
+            if (character < L' ') character = L' ';
+        }
+        scan.report += title;
+    }
+    scan.report += L"\r\n";
     scan.report += Tr(wt::TextId::WindowDiagTidy);
     scan.report += L": ";
     scan.report += attemptedAndFailed ? Tr(wt::TextId::WindowDiagAttemptFailed) :
@@ -594,8 +601,9 @@ BOOL CALLBACK EnumerateWindowDiagnostics(HWND window, LPARAM param) {
     return TRUE;
 }
 
-std::wstring BuildWindowDiagnostics() {
+std::wstring BuildWindowDiagnostics(bool redactTitles = false) {
     WindowDiagnosticScan scan;
+    scan.redactTitles = redactTitles;
     scan.report = Tr(wt::TextId::WindowDiagIntro);
     EnumWindows(EnumerateWindowDiagnostics, reinterpret_cast<LPARAM>(&scan));
     if (!scan.listed) scan.report += Tr(wt::TextId::WindowDiagNoWindows);
@@ -604,16 +612,51 @@ std::wstring BuildWindowDiagnostics() {
     return scan.report;
 }
 
+bool CopyPrivateWindowReport(HWND owner) {
+    // Never put window titles on the clipboard through the dedicated Copy button.
+    const std::wstring report = BuildWindowDiagnostics(true);
+    if (!OpenClipboard(owner)) return false;
+    const SIZE_T bytes = (report.size() + 1) * sizeof(wchar_t);
+    HGLOBAL memory = GlobalAlloc(GMEM_MOVEABLE, bytes);
+    bool copied = false;
+    if (memory) {
+        auto* destination = static_cast<wchar_t*>(GlobalLock(memory));
+        if (destination) {
+            std::copy(report.begin(), report.end(), destination);
+            destination[report.size()] = 0;
+            GlobalUnlock(memory);
+            if (EmptyClipboard() && SetClipboardData(CF_UNICODETEXT, memory)) {
+                copied = true;
+                memory = nullptr; // Clipboard now owns this movable allocation.
+            }
+        }
+        if (memory) GlobalFree(memory);
+    }
+    CloseClipboard();
+    return copied;
+}
+
 INT_PTR CALLBACK WindowDiagnosticsProc(HWND dialog, UINT message, WPARAM wparam, LPARAM) {
     if (message == WM_INITDIALOG) {
         SetWindowTextW(dialog, Tr(wt::TextId::WindowDiagTitle));
         SetDlgItemTextW(dialog, IDC_WINDOW_REPORT, BuildWindowDiagnostics().c_str());
         SetDlgItemTextW(dialog, IDOK, Tr(wt::TextId::WindowDiagClose));
+        SetDlgItemTextW(dialog, IDC_COPY_REPORT, Tr(wt::TextId::WindowDiagCopy));
         return TRUE;
     }
-    if (message == WM_COMMAND && (LOWORD(wparam) == IDOK || LOWORD(wparam) == IDCANCEL)) {
-        EndDialog(dialog, LOWORD(wparam));
-        return TRUE;
+    if (message == WM_COMMAND) {
+        if (LOWORD(wparam) == IDC_COPY_REPORT) {
+            if (CopyPrivateWindowReport(dialog)) {
+                SetDlgItemTextW(dialog, IDC_COPY_REPORT, Tr(wt::TextId::WindowDiagCopied));
+            } else {
+                Warn(Tr(wt::TextId::WindowDiagCopyFailed), dialog);
+            }
+            return TRUE;
+        }
+        if (LOWORD(wparam) == IDOK || LOWORD(wparam) == IDCANCEL) {
+            EndDialog(dialog, LOWORD(wparam));
+            return TRUE;
+        }
     }
     return FALSE;
 }

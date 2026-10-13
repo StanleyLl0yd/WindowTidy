@@ -43,6 +43,8 @@
 
 Owner-approved planning scope (2026-10-13), **not implemented**. Proposed numeric version target: 0.3.0, not a release commitment.
 
+Win32 dependencies, command UX, one-step Undo semantics and acceptance gates are detailed in [docs/M2-M3-WINDOW-ACTIONS.md](docs/M2-M3-WINDOW-ACTIONS.md).
+
 - [ ] **Maximize / Restore** a selected eligible window using native show-state semantics, without affecting other windows or its topmost status.
 - [ ] **Center** a selected window within its current monitor's working area (taskbar-aware), retaining its size when possible.
 - [ ] **Snap** to left/right halves or one of four quarters of the target monitor's working area. This is Window Tidy placement, not Windows Snap Groups integration.

@@ -12,7 +12,7 @@ A lightweight, portable Windows desktop window manager written in native C++20 a
 - **Tray application:** the approved Window Tidy icon in the executable, notification area and native Settings dialog.
 - **Language:** Russian UI when the current Windows display language is Russian (including regional variants); English for all other Windows display languages.
 - **Hotkey diagnostics:** the tray menu reports the registration status of every shortcut and the corresponding Win32 error code when registration fails.
-- **Window diagnostics:** the tray menu can inspect up to 24 visible titled windows on demand and explain why Tidy or Move might skip them. Failed Tidy attempts are recorded by window identity in memory, without saving titles or files.
+- **Window diagnostics:** the tray menu can inspect up to 24 visible titled windows on demand and explain why Tidy or Move might skip them. Failed Tidy and direct Minimize/Move attempts are recorded by window identity in memory, without saving titles or files. The diagnostic view also shows Win32 class names to help identify unexpected shell surfaces.
 - **Windows Registry only:** no INI, JSON or local settings files.
 
 ### Default hotkeys

@@ -3,6 +3,7 @@
 #include "windowtidy/localization.hpp"
 #include "windowtidy/menu_title.hpp"
 #include "windowtidy/tray_target.hpp"
+#include "windowtidy/window_diagnostics.hpp"
 #include <cassert>
 #include <cstdio>
 
@@ -29,6 +30,14 @@ int main() {
     assert(!MatchesWindowIdentity(wrongThread));
     assert(DestroyWindow(probe));
     assert(!MatchesWindowIdentity(identity));
+    static_assert(ClassifyTidyStyle(WS_MINIMIZEBOX, 0, false, true) == TidyStyleReason::Eligible);
+    static_assert(ClassifyTidyStyle(0, 0, false, false) == TidyStyleReason::NoMinimizeButton);
+    static_assert(ClassifyTidyStyle(WS_MINIMIZEBOX, WS_EX_TOOLWINDOW, false, false) == TidyStyleReason::ToolWindow);
+    static_assert(ClassifyTidyStyle(WS_MINIMIZEBOX, 0, true, false) == TidyStyleReason::OwnedWindow);
+    static_assert(ClassifyTidyStyle(WS_MINIMIZEBOX, WS_EX_TOPMOST, false, true) == TidyStyleReason::ExcludedTopmost);
+    static_assert(ClassifyTidyStyle(WS_MINIMIZEBOX, WS_EX_TOPMOST, false, false) == TidyStyleReason::Eligible);
+    static_assert(!CanMoveByStyle(WS_POPUP));
+    static_assert(CanMoveByStyle(WS_CAPTION));
     static_assert(LanguageForUiLang(MAKELANGID(LANG_RUSSIAN, SUBLANG_DEFAULT)) == Language::Russian);
     static_assert(LanguageForUiLang(MAKELANGID(LANG_ENGLISH, SUBLANG_ENGLISH_US)) == Language::English);
     static_assert(LanguageForUiLang(MAKELANGID(LANG_GERMAN, SUBLANG_GERMAN)) == Language::English);

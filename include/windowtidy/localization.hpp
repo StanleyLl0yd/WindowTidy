@@ -64,10 +64,27 @@ enum class TextId {
     DiagnosticVirtualKey,
     TrayChooseTarget,
     TrayNoTargets,
+    TrayWindowDiagnostics,
+    WindowDiagTitle,
+    WindowDiagIntro,
+    WindowDiagTidy,
+    WindowDiagMove,
+    WindowDiagReady,
+    WindowDiagAlreadyMinimized,
+    WindowDiagNoMinButton,
+    WindowDiagToolWindow,
+    WindowDiagOwnedWindow,
+    WindowDiagTopmostExcluded,
+    WindowDiagAttemptFailed,
+    WindowDiagMoveNoCaption,
+    WindowDiagNoWindows,
+    WindowDiagTruncated,
+    WindowDiagFooter,
+    WindowDiagClose,
 };
 
 struct Translation { const wchar_t* english; const wchar_t* russian; };
-inline constexpr std::array<Translation, 53> kTranslations{{
+inline constexpr std::array<Translation, 70> kTranslations{{
     {L"Window Tidy Settings", L"Настройки Window Tidy"},
     {L"Global hotkeys", L"Глобальные горячие клавиши"},
     {L"Tidy / Undo:", L"Свернуть / вернуть:"},
@@ -121,7 +138,27 @@ inline constexpr std::array<Translation, 53> kTranslations{{
     {L"VK", L"VK"},
     {L"Choose target window...", L"Выбрать окно..."},
     {L"No available windows", L"Нет доступных окон"},
+    {L"Window diagnostics...", L"Диагностика окон..."},
+    {L"Window diagnostics", L"Диагностика окон"},
+    {L"Visible titled windows (up to 24). These checks describe window styles, not permissions.\r\n\r\n",
+     L"Видимые окна с заголовками (до 24). Проверяются свойства окон, а не права доступа.\r\n\r\n"},
+    {L"Tidy", L"Сворачивание остальных"},
+    {L"Move", L"Перемещение"},
+    {L"eligible by style", L"подходит по свойствам"},
+    {L"already minimized", L"уже свёрнуто"},
+    {L"no minimize button", L"нет кнопки сворачивания"},
+    {L"tool window", L"вспомогательное окно"},
+    {L"owned/popup window", L"дочернее по владельцу / всплывающее окно"},
+    {L"excluded always-on-top window", L"исключено как окно поверх остальных"},
+    {L"last Tidy attempted, but window stayed open", L"последняя попытка Tidy не свернула окно"},
+    {L"no standard title bar", L"нет стандартного заголовка"},
+    {L"No eligible titled windows found.\r\n", L"Подходящие окна с заголовками не найдены.\r\n"},
+    {L"More windows not shown.\r\n", L"Остальные окна не показаны.\r\n"},
+    {L"\r\nAn eligible window can still reject an action (e.g. elevated or different-user applications). Tidy also keeps the chosen app and may exclude other monitors. Results from the last Tidy are memory-only. No titles are saved to disk.",
+     L"\r\nДаже подходящее окно может не разрешить действие (например, при повышенных правах или другом пользователе). Tidy также сохраняет выбранное приложение и может исключать другие мониторы. Результаты последнего Tidy хранятся только в памяти. Заголовки не записываются на диск."},
+    {L"Close", L"Закрыть"},
 }};
+static_assert(kTranslations.size() == static_cast<std::size_t>(TextId::WindowDiagClose) + 1);
 
 constexpr const wchar_t* Text(TextId id, Language language) noexcept {
     const auto& item = kTranslations[static_cast<std::size_t>(id)];

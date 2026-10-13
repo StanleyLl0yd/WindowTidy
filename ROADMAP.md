@@ -35,7 +35,7 @@
 - [ ] Accessibility and keyboard-only Settings workflow.
 - [x] Implement retry-based recovery of the notification icon after Explorer restarts (interactive acceptance remains in #2).
 - [ ] Verify elevated / protected / UWP window behavior.
-- [ ] Improve diagnostic feedback without writing local log files.
+- [x] Add on-demand, read-only window-style diagnostics and memory-only results for unsuccessful Tidy attempts; no local log files (desktop confirmation still required).
 
 ## M2: Quality of life
 

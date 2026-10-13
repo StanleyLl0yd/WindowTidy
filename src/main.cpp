@@ -15,6 +15,7 @@
 #include "windowtidy/localization.hpp"
 #include "windowtidy/menu_title.hpp"
 #include "windowtidy/tray_target.hpp"
+#include "windowtidy/window_diagnostics.hpp"
 #include "../res/resource.h"
 
 namespace {
@@ -31,6 +32,7 @@ constexpr size_t kActionCount = 5;
 constexpr int kHotkeyBaseId = 100;
 constexpr UINT_PTR kTrayRetryTimer = 1;
 constexpr size_t kMaxTrayTargets = 24;
+constexpr size_t kMaxDiagnosticsWindows = 24;
 static_assert(ID_TRAY_TARGET_BASE + kMaxTrayTargets * kActionCount < 0x10000);
 
 struct Settings {
@@ -82,6 +84,7 @@ std::array<DWORD, kActionCount> g_hotkeyErrors{};
 std::array<unsigned, kActionCount> g_hotkeyMessages{};
 std::array<bool, kActionCount> g_hotkeyLastTargetValid{};
 std::vector<TidyEntry> g_tidied;
+std::vector<wt::WindowIdentity> g_lastTidyFailures; // Handles only; window titles are not cached.
 
 const wchar_t* Tr(wt::TextId id) {
     return wt::Text(id, g_language);
@@ -276,9 +279,8 @@ BOOL CALLBACK EnumerateTidy(HWND window, LPARAM param) {
     if (!EligibleWindow(window) || IsIconic(window)) return TRUE;
     const LONG_PTR style = GetWindowLongPtrW(window, GWL_STYLE);
     const LONG_PTR extended = GetWindowLongPtrW(window, GWL_EXSTYLE);
-    if ((style & WS_MINIMIZEBOX) == 0 || (extended & WS_EX_TOOLWINDOW) != 0 ||
-        GetWindow(window, GW_OWNER) != nullptr) return TRUE;
-    if (context->settings.skipTopmost && (extended & WS_EX_TOPMOST) != 0) return TRUE;
+    if (wt::ClassifyTidyStyle(style, extended, GetWindow(window, GW_OWNER) != nullptr,
+                              context->settings.skipTopmost) != wt::TidyStyleReason::Eligible) return TRUE;
     if (GetAncestor(window, GA_ROOTOWNER) == context->exemptRoot) return TRUE;
     if (context->settings.onlyCurrentMonitor &&
         MonitorFromWindow(window, MONITOR_DEFAULTTONEAREST) != context->currentMonitor) return TRUE;
@@ -287,7 +289,12 @@ BOOL CALLBACK EnumerateTidy(HWND window, LPARAM param) {
     GetWindowThreadProcessId(window, &pid);
     const bool wasMaximized = IsZoomed(window) != FALSE;
     ShowWindow(window, SW_MINIMIZE);
-    if (IsIconic(window)) g_tidied.push_back(TidyEntry{window, pid, wasMaximized});
+    if (IsIconic(window)) {
+        g_tidied.push_back(TidyEntry{window, pid, wasMaximized});
+    } else if (g_lastTidyFailures.size() < kMaxDiagnosticsWindows) {
+        const auto identity = wt::CaptureWindowIdentity(window);
+        if (identity.hwnd) g_lastTidyFailures.push_back(identity);
+    }
     return TRUE;
 }
 
@@ -295,6 +302,7 @@ void DoTidy(HWND target) {
     if (!EligibleWindow(target)) return;
     const HWND root = GetAncestor(target, GA_ROOTOWNER);
     g_tidied.clear();
+    g_lastTidyFailures.clear();
     const TidyContext context{root, MonitorFromWindow(target, MONITOR_DEFAULTTONEAREST), g_settings};
     EnumWindows(EnumerateTidy, reinterpret_cast<LPARAM>(&context));
 }
@@ -341,7 +349,7 @@ BOOL CALLBACK EnumerateMonitors(HMONITOR handle, HDC, LPRECT, LPARAM param) {
 void MoveWindowToMonitor(HWND target, int direction) {
     if (!EligibleWindow(target) || IsIconic(target)) return;
     const LONG_PTR style = GetWindowLongPtrW(target, GWL_STYLE);
-    if ((style & WS_CAPTION) == 0) return;
+    if (!wt::CanMoveByStyle(style)) return;
     std::vector<Monitor> monitors;
     EnumDisplayMonitors(nullptr, nullptr, EnumerateMonitors, reinterpret_cast<LPARAM>(&monitors));
     if (monitors.size() < 2) return;
@@ -495,6 +503,93 @@ void ShowHotkeyDiagnostics() {
     MessageBoxW(g_window, report.c_str(), Tr(wt::TextId::DiagnosticTitle), MB_OK | MB_ICONINFORMATION);
 }
 
+const wchar_t* TidyStyleExplanation(wt::TidyStyleReason reason) {
+    switch (reason) {
+    case wt::TidyStyleReason::NoMinimizeButton: return Tr(wt::TextId::WindowDiagNoMinButton);
+    case wt::TidyStyleReason::ToolWindow: return Tr(wt::TextId::WindowDiagToolWindow);
+    case wt::TidyStyleReason::OwnedWindow: return Tr(wt::TextId::WindowDiagOwnedWindow);
+    case wt::TidyStyleReason::ExcludedTopmost: return Tr(wt::TextId::WindowDiagTopmostExcluded);
+    case wt::TidyStyleReason::Eligible: return Tr(wt::TextId::WindowDiagReady);
+    }
+    return Tr(wt::TextId::WindowDiagReady);
+}
+
+struct WindowDiagnosticScan {
+    std::wstring report;
+    size_t listed{};
+    bool truncated{};
+};
+
+BOOL CALLBACK EnumerateWindowDiagnostics(HWND window, LPARAM param) {
+    auto& scan = *reinterpret_cast<WindowDiagnosticScan*>(param);
+    if (!EligibleWindow(window)) return TRUE;
+    wchar_t name[160]{};
+    const int length = GetWindowTextW(window, name, static_cast<int>(std::size(name)));
+    if (length <= 0) return TRUE;
+    if (scan.listed == kMaxDiagnosticsWindows) {
+        scan.truncated = true;
+        return FALSE;
+    }
+
+    std::wstring title(name, static_cast<size_t>(length));
+    for (auto& character : title) {
+        if (character < L' ') character = L' ';
+    }
+    const LONG_PTR style = GetWindowLongPtrW(window, GWL_STYLE);
+    const LONG_PTR extended = GetWindowLongPtrW(window, GWL_EXSTYLE);
+    const bool minimized = IsIconic(window) != FALSE;
+    const auto reason = wt::ClassifyTidyStyle(style, extended,
+                          GetWindow(window, GW_OWNER) != nullptr, g_settings.skipTopmost);
+    const bool attemptedAndFailed = std::any_of(g_lastTidyFailures.begin(), g_lastTidyFailures.end(),
+        [window](const wt::WindowIdentity& id) {
+            return id.hwnd == window && wt::MatchesWindowIdentity(id);
+        });
+
+    scan.report += std::to_wstring(++scan.listed) + L". " + title + L"\r\n";
+    scan.report += Tr(wt::TextId::WindowDiagTidy);
+    scan.report += L": ";
+    scan.report += attemptedAndFailed ? Tr(wt::TextId::WindowDiagAttemptFailed) :
+                   minimized ? Tr(wt::TextId::WindowDiagAlreadyMinimized) :
+                   TidyStyleExplanation(reason);
+    scan.report += L"; ";
+    scan.report += Tr(wt::TextId::WindowDiagMove);
+    scan.report += L": ";
+    scan.report += minimized ? Tr(wt::TextId::WindowDiagAlreadyMinimized) :
+                   wt::CanMoveByStyle(style) ? Tr(wt::TextId::WindowDiagReady) :
+                   Tr(wt::TextId::WindowDiagMoveNoCaption);
+    scan.report += L"\r\n\r\n";
+    return TRUE;
+}
+
+std::wstring BuildWindowDiagnostics() {
+    WindowDiagnosticScan scan;
+    scan.report = Tr(wt::TextId::WindowDiagIntro);
+    EnumWindows(EnumerateWindowDiagnostics, reinterpret_cast<LPARAM>(&scan));
+    if (!scan.listed) scan.report += Tr(wt::TextId::WindowDiagNoWindows);
+    if (scan.truncated) scan.report += Tr(wt::TextId::WindowDiagTruncated);
+    scan.report += Tr(wt::TextId::WindowDiagFooter);
+    return scan.report;
+}
+
+INT_PTR CALLBACK WindowDiagnosticsProc(HWND dialog, UINT message, WPARAM wparam, LPARAM) {
+    if (message == WM_INITDIALOG) {
+        SetWindowTextW(dialog, Tr(wt::TextId::WindowDiagTitle));
+        SetDlgItemTextW(dialog, IDC_WINDOW_REPORT, BuildWindowDiagnostics().c_str());
+        SetDlgItemTextW(dialog, IDOK, Tr(wt::TextId::WindowDiagClose));
+        return TRUE;
+    }
+    if (message == WM_COMMAND && (LOWORD(wparam) == IDOK || LOWORD(wparam) == IDCANCEL)) {
+        EndDialog(dialog, LOWORD(wparam));
+        return TRUE;
+    }
+    return FALSE;
+}
+
+void ShowWindowDiagnostics() {
+    DialogBoxParamW(g_instance, MAKEINTRESOURCEW(IDD_WINDOW_DIAGNOSTICS),
+                    g_window, WindowDiagnosticsProc, 0);
+}
+
 void TrayMenu() {
     // Snapshot the foreground before our menu receives activation. Hotkeys use live foreground.
     g_trayTarget = wt::CaptureWindowIdentity(ActiveWindow());
@@ -541,6 +636,7 @@ void TrayMenu() {
     AppendMenuW(menu, MF_SEPARATOR, 0, nullptr);
     AppendMenuW(menu, MF_STRING, ID_TRAY_SETTINGS, Tr(wt::TextId::TraySettings));
     AppendMenuW(menu, MF_STRING, ID_TRAY_DIAGNOSTICS, Tr(wt::TextId::TrayDiagnostics));
+    AppendMenuW(menu, MF_STRING, ID_TRAY_WINDOW_DIAGNOSTICS, Tr(wt::TextId::TrayWindowDiagnostics));
     AppendMenuW(menu, MF_STRING | (StartupEnabled() ? MF_CHECKED : 0),
                 ID_TRAY_STARTUP, Tr(wt::TextId::TrayStartup));
     AppendMenuW(menu, MF_SEPARATOR, 0, nullptr);
@@ -749,6 +845,7 @@ LRESULT CALLBACK WindowProc(HWND window, UINT message, WPARAM wparam, LPARAM lpa
         case ID_TRAY_MINIMIZE: DispatchAction(Minimize, VerifiedTrayTarget()); break;
         case ID_TRAY_SETTINGS: ShowSettings(); break;
         case ID_TRAY_DIAGNOSTICS: ShowHotkeyDiagnostics(); break;
+        case ID_TRAY_WINDOW_DIAGNOSTICS: ShowWindowDiagnostics(); break;
         case ID_TRAY_STARTUP:
             if (!SetStartup(!StartupEnabled())) Warn(Tr(wt::TextId::WarnCannotStartup));
             break;

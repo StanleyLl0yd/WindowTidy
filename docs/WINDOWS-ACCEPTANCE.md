@@ -67,6 +67,21 @@ Owner's A24 observations on 2026-10-13: Telegram mini-app lacks minimize and cap
 | --- | --- | --- |
 | A25 | Open new **Window diagnostics...** for Telegram mini-app, Task Manager, ADUC and notification overflow, and record only each window's **Class** (not private titles). Run direct Minimize and Next Monitor on Task Manager, reopen diagnostics and record any failure lines, with Win32 error codes where available. | Window classes distinguish genuine applications from shell popups. Minimize/Move outcomes are reported only for live matching HWND/PID/thread, with no logs or background queries. Failures are not silently reclassified as successful; no elevated rights or blanket force-hide behavior is introduced. |
 
+## M1 A25 owner observations (2026-10-13)
+
+The owner tested `5da1bb1` on an actual Windows desktop. Store only classes and technical results, not private filenames, user names, e-mail addresses, paths or document titles:
+
+- Explorer overflow: `TopLevelWindowForOverflowXamlIsland`, incorrectly included in the diagnostic list before the fix.
+- Telegram mini-app: `Qt51519QWindow`, with no standard minimize button or caption, skipped by the current Tidy/Move policy. Telegram's main window is a different Qt class and remains unaffected.
+- Task Manager: `TaskManagerWindow`; direct minimize did not take effect, and the monitor move failed with **Win32 error 5, access denied**. Window Tidy is an ordinary user process; permissions are not bypassed.
+- ADUC snap-in: `MMCMainFrame`; the earlier owner run saw a failed Tidy attempt while launched under another user's credentials. Whether elevation/user isolation is the exact cause is not yet established. Its style checks are normal.
+
+A25 diagnostic behavior is confirmed for these scenarios; the *underlying exceptional-window actions are not fixed*. Keep #3 open.
+
+| ID | Actions | Expected outcome |
+| --- | --- | --- |
+| A26 | With the overflow panel open and multiple ordinary app windows, start the newest build and inspect **Choose target window...** and **Window diagnostics...**. Attempt Tidy and explicit actions for ordinary windows. In Task Manager's diagnostic failure, check the localized message for `Win32: 5`. | `TopLevelWindowForOverflowXamlIsland` is absent from all target lists. Ordinary application actions remain functional. An access-denied message is explained without elevation or access-control bypass. If an unsupported app is skipped, it is not mistaken for a successful action. |
+
 ## Post-test and release decision
 
 - Restore the original hotkeys, Tidy settings and exact autostart Run value, or delete test settings when using a disposable account. Exit Window Tidy.

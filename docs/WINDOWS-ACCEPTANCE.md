@@ -90,6 +90,14 @@ The user accepted A26 on 2026-10-13 with three PASS results on `7d93bc46`: XAML 
 | --- | --- | --- |
 | A27 | Open Notepad A and B, use Tidy to minimize B, close B from the taskbar while minimized, then create a new window (including another Notepad window) and invoke Undo. Repeat with a minimized normal and a maximized window, without closing them. | Undo never restores or acts on an unrelated newly opened window. Remaining matching windows restore, preserving prior maximized state. The identity guard checks HWND, PID, and thread ID, though Win32 handles can theoretically be reused within the same thread; no absolute atomicity is claimed. |
 
+## M1 A28: Settings keyboard and accessibility
+
+Native Settings now uses unique translated Alt+letter mnemonics for all five hotkey labels, the two Tidy options, Move mode and autostart. Native logic tests verify marker presence/uniqueness, but **interactive keyboard navigation and assistive-technology results still require actual Windows desktop testing**.
+
+| ID | Actions | Expected outcome |
+| --- | --- | --- |
+| A28 | Open Settings with the keyboard. Use the displayed Alt+underlined-letter access keys on each hotkey label, both Tidy options, Move mode and autostart (use the matching input language where needed). Navigate using Tab/Shift+Tab, press Space on X to clear a hotkey, Enter to save, Esc to cancel, and repeat with a screen reader if available. | Each label focuses its adjacent hotkey control; checkboxes toggle; Move mode receives focus; saving persists, cancelling discards edits, and no conflicting mnemonics exist. Screen-reader naming of X clear buttons is separately pending and is **not** proven by CI. |
+
 ## Post-test and release decision
 
 - Restore the original hotkeys, Tidy settings and exact autostart Run value, or delete test settings when using a disposable account. Exit Window Tidy.

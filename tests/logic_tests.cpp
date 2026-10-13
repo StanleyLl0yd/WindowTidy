@@ -6,12 +6,30 @@
 #include "windowtidy/window_diagnostics.hpp"
 #include <cassert>
 #include <cstdio>
+#include <cwchar>
 
 int main() {
     using namespace wt;
     assert(SafeMenuLabel(L"Notes & tasks") == L"Notes && tasks");
     assert(SafeMenuLabel(L"Title\tCtrl+K\n") == L"Title Ctrl+K ");
     assert(SafeMenuLabel(L"") == L"");
+    // Native dialog accelerators must be present and unique in both translations.
+    constexpr std::array settingsLabels{
+        TextId::TidyLabel, TextId::TopmostLabel, TextId::NextLabel,
+        TextId::PreviousLabel, TextId::MinimizeLabel, TextId::SkipTopmost,
+        TextId::OnlyCurrent, TextId::MoveModeLabel, TextId::RunAtStartup
+    };
+    for (const auto lang : {Language::English, Language::Russian}) {
+        std::array<wchar_t, settingsLabels.size()> keys{};
+        for (size_t i = 0; i < settingsLabels.size(); ++i) {
+            const wchar_t* marker = std::wcschr(Text(settingsLabels[i], lang), L'&');
+            assert(marker != nullptr && marker[1] != 0 && marker[1] != L'&');
+            keys[i] = marker[1];
+            for (size_t previous = 0; previous < i; ++previous) {
+                assert(keys[i] != keys[previous]);
+            }
+        }
+    }
 
     assert(!CaptureWindowIdentity(nullptr).hwnd);
     assert(!MatchesWindowIdentity({}));

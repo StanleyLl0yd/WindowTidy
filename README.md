@@ -8,7 +8,7 @@ A lightweight, portable Windows desktop window manager written in native C++20 a
 - **Always on top:** toggle topmost status of the focused window.
 - **Move monitor:** move a window to the next or previous display, preserving relative placement, centering or maximizing it.
 - **Minimize:** minimize the active window.
-- **Global hotkeys:** customize all five shortcuts in Settings.
+- **Global hotkeys:** customize all five shortcuts in Settings. Settings provides localized Alt+letter access keys, Tab/Shift+Tab navigation, Space on an X button to clear a shortcut, Enter to save and Esc to cancel.
 - **Tray application:** the approved Window Tidy icon in the executable, notification area and native Settings dialog.
 - **Language:** Russian UI when the current Windows display language is Russian (including regional variants); English for all other Windows display languages.
 - **Hotkey diagnostics:** the tray menu reports the registration status of every shortcut and the corresponding Win32 error code when registration fails.

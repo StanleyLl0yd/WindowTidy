@@ -4,6 +4,7 @@
 #include "windowtidy/menu_title.hpp"
 #include "windowtidy/tray_target.hpp"
 #include "windowtidy/window_diagnostics.hpp"
+#include <array>
 #include <cassert>
 #include <cstdio>
 #include <cwchar>
@@ -116,6 +117,35 @@ int main() {
     const RECT mid = CenterInWork(vertical, RECT{0, 0, 900, 500});
     assert(mid.left == 90 && mid.top == -850);
     assert(mid.right == 990 && mid.bottom == -350);
+
+    // Work areas for primary, negative-origin, top/bottom/left/right taskbars,
+    // portrait screens and odd pixel dimensions (geometry only, not actual DPI).
+    constexpr std::array<RECT, 7> workAreas{{
+        {0, 40, 1920, 1080}, {0, 0, 1920, 1032},
+        {64, 0, 1920, 1080}, {0, 0, 1856, 1080},
+        {-1920, -1080, 0, 0}, {-1080, -1920, 0, 0},
+        {13, -1379, 1378, 0}
+    }};
+    constexpr std::array<RECT, 8> desiredWindows{{
+        {100, 100, 800, 600}, {2200, 1500, 3400, 2600},
+        {-2400, -2100, -1600, -1700}, {0, 0, 1, 1},
+        {500, 500, 500, 500}, {0, 0, 10000, 10000},
+        {100, 150, 90, 140}, {-1800, -500, 100, 900}
+    }};
+    const auto within = [](const RECT& rectangle, const RECT& work) {
+        return Width(rectangle) >= 1 && Height(rectangle) >= 1 &&
+            rectangle.left >= work.left && rectangle.top >= work.top &&
+            rectangle.right <= work.right && rectangle.bottom <= work.bottom;
+    };
+    for (const RECT& work : workAreas) {
+        for (const RECT& desired : desiredWindows) {
+            assert(within(ClampToWork(desired, work), work));
+            assert(within(CenterInWork(work, desired), work));
+            for (const RECT& destination : workAreas) {
+                assert(within(PreserveRelative(work, destination, desired), destination));
+            }
+        }
+    }
 
     const RECT invalid{0, 0, 0, 0};
     const RECT unchanged = PreserveRelative(invalid, right, original);

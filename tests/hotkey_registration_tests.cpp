@@ -1,5 +1,6 @@
 #include <windows.h>
 #include <oleacc.h>
+#include <shellapi.h>
 #include <cwchar>
 #include <array>
 #include "../res/resource.h"
@@ -169,6 +170,75 @@ bool RunSettingsCycle(const wchar_t* path, Shortcut expected, bool save) {
            commandPosted && dialogClosed && restored && released;
 }
 
+bool IconPresent(const NOTIFYICONIDENTIFIER& identifier) {
+    RECT rectangle{};
+    return SUCCEEDED(Shell_NotifyIconGetRect(&identifier, &rectangle));
+}
+
+bool WaitForIcon(const NOTIFYICONIDENTIFIER& identifier, bool present, unsigned timeoutMs) {
+    for (unsigned elapsed = 0; elapsed < timeoutMs; elapsed += 50) {
+        if (IconPresent(identifier) == present) return true;
+        Sleep(50);
+    }
+    return IconPresent(identifier) == present;
+}
+
+bool RunSyntheticTrayRecovery(const wchar_t* path) {
+    std::wstring command = L"\\\"" + std::wstring(path) + L"\\\"";
+    STARTUPINFOW startup{};
+    startup.cb = sizeof(startup);
+    PROCESS_INFORMATION process{};
+    if (!CreateProcessW(path, command.data(), nullptr, nullptr, FALSE, 0,
+                        nullptr, nullptr, &startup, &process)) return false;
+
+    HWND window{};
+    DWORD ownerPid{};
+    for (unsigned elapsed = 0; elapsed < 5000; elapsed += 50) {
+        window = FindWindowW(L"WindowTidyWindow_38132E6B", nullptr);
+        if (window) GetWindowThreadProcessId(window, &ownerPid);
+        if (window && ownerPid == process.dwProcessId) break;
+        Sleep(50);
+    }
+    if (!window || ownerPid != process.dwProcessId) {
+        std::fputs("Tray simulation: expected test application window was not found\n", stderr);
+        StopChild(process);
+        return false;
+    }
+
+    NOTIFYICONIDENTIFIER identifier{};
+    identifier.cbSize = sizeof(identifier);
+    identifier.hWnd = window;
+    identifier.uID = 1; // App's own tray icon identity.
+    // A headless runner may have no interactive notification-area shell.
+    // Do not treat an unavailable shell as proof of Explorer recovery.
+    if (!WaitForIcon(identifier, true, 3000)) {
+        std::puts("SKIP: tray icon not queryable on this desktop; A15 still requires real GUI testing");
+        StopChild(process);
+        return true;
+    }
+
+    NOTIFYICONDATAW icon{};
+    icon.cbSize = sizeof(icon);
+    icon.hWnd = window;
+    icon.uID = 1;
+    const bool deleted = Shell_NotifyIconW(NIM_DELETE, &icon) != FALSE;
+    const bool gone = deleted && WaitForIcon(identifier, false, 2000);
+    const UINT taskbarCreated = RegisterWindowMessageW(L"TaskbarCreated");
+    const bool posted = gone && taskbarCreated != 0 &&
+                        PostMessageW(window, taskbarCreated, 0, 0);
+    const bool restored = posted && WaitForIcon(identifier, true, 5000);
+    const bool running = WaitForSingleObject(process.hProcess, 0) == WAIT_TIMEOUT;
+    StopChild(process);
+    if (!(deleted && gone && posted && restored && running)) {
+        std::fprintf(stderr,
+                     "Synthetic tray recovery: deleted=%d gone=%d posted=%d restored=%d running=%d\n",
+                     deleted, gone, posted, restored, running);
+        return false;
+    }
+    std::puts("Synthetic TaskbarCreated tray icon re-add test passed (Explorer was not restarted)");
+    return true;
+}
+
 } // namespace
 
 int wmain(int argc, wchar_t** argv) {
@@ -200,6 +270,10 @@ int wmain(int argc, wchar_t** argv) {
     if (GetEnvironmentVariableW(L"CI", nullptr, 0) != 0 &&
         !RunSettingsCycle(path, tidy, true)) {
         std::fputs("FAILED: shortcut must remain registered after Settings Save\n", stderr);
+        return 1;
+    }
+    if (!RunSyntheticTrayRecovery(path)) {
+        std::fputs("FAILED: synthetic TaskbarCreated did not restore the test tray icon\n", stderr);
         return 1;
     }
     std::puts("Hotkey conflicts and Settings Cancel/Save lifecycle checks passed");

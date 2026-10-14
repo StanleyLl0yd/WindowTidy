@@ -116,6 +116,26 @@ The on-demand Window diagnostics dialog retains the normal local view, but adds 
 | --- | --- | --- |
 | A29 | Open Window diagnostics with a few windows whose titles include deliberately recognizable **non-sensitive dummy** document names. Click **Copy without titles**, paste into Notepad and inspect. Also test repeated copying and a locked clipboard if possible, on Russian and English UI. | Pasted report contains no window titles, dummy document names, usernames, e-mail addresses or file paths. It preserves class/status/error information, displays the copied confirmation, and reports clipboard errors without crashing or writing log files. The normal diagnostic view remains unchanged. |
 
+## M1 owner results on main 87783e8c (2026-10-14)
+
+Owner reported 5 PASS / 0 FAIL / 2 BLOCKED for the candidate from Windows CI #38536998819:
+
+| ID | Result | Boundary |
+| --- | --- | --- |
+| A27 | PASS | Undo after closing/replacing a formerly minimized window did not affect an unrelated new window |
+| A28 | PASS | Keyboard-only Settings acceptance passed |
+| A28a | BLOCKED | No real NVDA/Narrator screen-reader confirmation; programmatic MSAA integration is green |
+| A29 | PASS | Copy without titles worked on the actual desktop |
+| A22 | PASS | Closing a chosen window while the picker menu was open remained safe |
+| A13 | PASS | Owner's tested multi-monitor scenario passed; no display topology, DPI settings or OS build were supplied, so untested permutations remain BLOCKED |
+| A15 | BLOCKED | No actual Explorer restart was performed |
+
+This update does **not** certify both Windows 10 and Windows 11 GUI matrices.
+
+### A15-sim: non-disruptive Explorer notification simulation
+
+A separate native Windows integration test now launches its own Window Tidy instance and, **only if the shell exposes the test icon**, removes that icon using `NIM_DELETE`, posts the registered `TaskbarCreated` message to the test instance and verifies the icon reappears via `Shell_NotifyIconGetRect`. It never kills Explorer and never deletes unrelated icons. If no queryable notification shell exists on the runner, it reports SKIP instead of claiming A15 passed. A successful simulation confirms the app's response to the notification and re-add request, **not** resilience to a real Explorer process restart, which remains A15 BLOCKED until manually verified.
+
 ## Post-test and release decision
 
 - Restore the original hotkeys, Tidy settings and exact autostart Run value, or delete test settings when using a disposable account. Exit Window Tidy.

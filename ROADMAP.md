@@ -45,11 +45,15 @@ No calendar date is guessed; each audit is triggered by completing that stage's 
 - [ ] Verify that picker against real Explorer/taskbar focus scenarios, protected and nonstandard windows, and accessibility before closing #3.
 - [x] Add unique localized Settings keyboard accelerators, with native tests.
 - [x] Add localized programmatic accessible names to all five hotkey-clear X buttons (MSAA integration test).
-- [ ] Verify keyboard-only Settings workflow and screen-reader experience on actual Windows desktops (A28/A28a).
+- [x] Verify keyboard-only Settings workflow on owner's Windows desktop (A28 PASS, 2026-10-14).
+- [ ] Verify screen-reader experience on actual Windows desktop (A28a BLOCKED; MSAA integration passed).
 - [x] Implement retry-based recovery of the notification icon after Explorer restarts (interactive acceptance remains in #2).
+- [ ] Real Explorer restart/tray-icon recovery acceptance A15 (owner BLOCKED); CI's synthetic TaskbarCreated test is only partial evidence.
 - [ ] Verify elevated / protected / UWP window behavior.
 - [x] Add on-demand, read-only window-style diagnostics and memory-only results for unsuccessful Tidy attempts; no local log files (desktop confirmation still required).
-- [x] Add an explicit redacted Copy button for technical diagnostics (GUI clipboard confirmation A29 pending).
+- [x] Add an explicit redacted Copy button for technical diagnostics (A29 owner desktop PASS, 2026-10-14).
+- [x] Validate Undo stale target and picker closed-window safety on owner's desktop (A27 and A22 PASS, 2026-10-14).
+- [ ] Complete remaining Windows 10/11 OS/build-specific A13 monitor topology matrix (owner's scenario PASS, topology not yet documented).
 - [ ] **M1 exit gate:** after M1 functional work and acceptance, execute the full two-pass repository audit, refactoring and code review; attach final report, reviewed PRs, final-main CI and GUI evidence to [#22](https://github.com/StanleyLl0yd/WindowTidy/issues/22) before marking M1 complete.
 
 ## M2: Quality of life and window arrangement (planned)

@@ -44,7 +44,8 @@ No calendar date is guessed; each audit is triggered by completing that stage's 
 - [x] Add explicit on-demand window selection to tray operations; no focus guessing, keyboard hooks or polling ([#3](https://github.com/StanleyLl0yd/WindowTidy/issues/3)).
 - [ ] Verify that picker against real Explorer/taskbar focus scenarios, protected and nonstandard windows, and accessibility before closing #3.
 - [x] Add unique localized Settings keyboard accelerators, with native tests.
-- [ ] Verify keyboard-only Settings workflow and accessible X-button names on actual Windows desktops (A28).
+- [x] Add localized programmatic accessible names to all five hotkey-clear X buttons (MSAA integration test).
+- [ ] Verify keyboard-only Settings workflow and screen-reader experience on actual Windows desktops (A28/A28a).
 - [x] Implement retry-based recovery of the notification icon after Explorer restarts (interactive acceptance remains in #2).
 - [ ] Verify elevated / protected / UWP window behavior.
 - [x] Add on-demand, read-only window-style diagnostics and memory-only results for unsuccessful Tidy attempts; no local log files (desktop confirmation still required).

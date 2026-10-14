@@ -95,7 +95,7 @@ bool HasAccessibleClearButtonNames(HWND dialog) {
         const HWND button = GetDlgItem(dialog, id);
         IAccessible* accessible{};
         if (!button || FAILED(AccessibleObjectFromWindow(
-                button, OBJID_CLIENT, __uuidof(IAccessible),
+                button, static_cast<DWORD>(OBJID_CLIENT), __uuidof(IAccessible),
                 reinterpret_cast<void**>(&accessible))) || !accessible) {
             allNamed = false;
             break;

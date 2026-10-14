@@ -26,7 +26,7 @@ if errorlevel 1 exit /b 1
 
 if /I not "%~1"=="test" goto done
 echo Building tests...
-cl /nologo /std:c++20 /W4 /WX /EHsc /utf-8 /DUNICODE /D_UNICODE /DWIN32_LEAN_AND_MEAN /DNOMINMAX /O2 /MT /Iinclude tests\logic_tests.cpp /Fe:"build\x64\logic_tests.exe" /Fo:"build\x64\logic_tests.obj" user32.lib
+cl /nologo /std:c++20 /W4 /WX /EHsc /utf-8 /DUNICODE /D_UNICODE /DWIN32_LEAN_AND_MEAN /DNOMINMAX /O2 /MT /Iinclude tests\logic_tests.cpp /Fe:"build\x64\logic_tests.exe" /Fo:"build\x64\logic_tests.obj" user32.lib advapi32.lib
 if errorlevel 1 exit /b 1
 echo Running tests...
 "build\x64\logic_tests.exe"

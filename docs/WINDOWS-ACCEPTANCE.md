@@ -136,6 +136,14 @@ This update does **not** certify both Windows 10 and Windows 11 GUI matrices.
 
 A separate native Windows integration test now launches its own Window Tidy instance and, **only if the shell exposes the test icon**, removes that icon using `NIM_DELETE`, posts the registered `TaskbarCreated` message to the test instance and verifies the icon reappears via `Shell_NotifyIconGetRect`. It never kills Explorer and never deletes unrelated icons. If no queryable notification shell exists on the runner, it reports SKIP instead of claiming A15 passed. A successful simulation confirms the app's response to the notification and re-add request, **not** resilience to a real Explorer process restart, which remains A15 BLOCKED until manually verified.
 
+## M1 A30: on-demand process security hints
+
+The Window diagnostics report now asks Windows for **read-only token comparisons** when the user opens the dialog. The result contains only the relationship of the target process to the Window Tidy process: same/different account, target integrity higher/not higher, or unavailable. It never includes account names, SIDs, processes' executable paths or credentials. If token access is denied, report unavailable; never elevate or bypass UIPI.
+
+| ID | Actions | Expected outcome |
+| --- | --- | --- |
+| A30 | Launch Window Tidy as a normal user; open Notepad, Task Manager, and if available an ADUC snap-in started with other credentials. Open Window diagnostics. Check only User and Integrity lines for those classes. Repeat after a failed Minimize/Move attempt; copy without titles if sharing. | Normal same-user Notepad is reported same account and not higher. Other-user/elevated windows are classified when OS permits reading their process tokens, or marked unavailable. Existing actions, window enumeration, accessibility, copy redaction, and Windows protections are unchanged. |
+
 ## Post-test and release decision
 
 - Restore the original hotkeys, Tidy settings and exact autostart Run value, or delete test settings when using a disposable account. Exit Window Tidy.

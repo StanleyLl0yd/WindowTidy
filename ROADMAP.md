@@ -50,6 +50,7 @@ No calendar date is guessed; each audit is triggered by completing that stage's 
 - [x] Implement retry-based recovery of the notification icon after Explorer restarts (interactive acceptance remains in #2).
 - [ ] Real Explorer restart/tray-icon recovery acceptance A15 (owner BLOCKED); CI's synthetic TaskbarCreated test is only partial evidence.
 - [ ] Verify elevated / protected / UWP window behavior.
+- [x] Add on-demand, read-only account/integrity *comparison* hints to window diagnostics (A30 GUI acceptance pending).
 - [x] Add on-demand, read-only window-style diagnostics and memory-only results for unsuccessful Tidy attempts; no local log files (desktop confirmation still required).
 - [x] Add an explicit redacted Copy button for technical diagnostics (A29 owner desktop PASS, 2026-10-14).
 - [x] Validate Undo stale target and picker closed-window safety on owner's desktop (A27 and A22 PASS, 2026-10-14).

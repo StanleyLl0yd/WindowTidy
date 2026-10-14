@@ -95,10 +95,17 @@ enum class TextId {
     AccessibleClearNext,
     AccessibleClearPrevious,
     AccessibleClearMinimize,
+    WindowDiagAccount,
+    WindowDiagIntegrity,
+    WindowDiagSameUser,
+    WindowDiagDifferentUser,
+    WindowDiagUnknown,
+    WindowDiagHigherIntegrity,
+    WindowDiagNotHigherIntegrity,
 };
 
 struct Translation { const wchar_t* english; const wchar_t* russian; };
-inline constexpr std::array<Translation, 84> kTranslations{{
+inline constexpr std::array<Translation, 91> kTranslations{{
     {L"Window Tidy Settings", L"Настройки Window Tidy"},
     {L"Global hotkeys", L"Глобальные горячие клавиши"},
     {L"&Tidy / Undo:", L"С&вернуть / вернуть:"},
@@ -154,8 +161,8 @@ inline constexpr std::array<Translation, 84> kTranslations{{
     {L"No available windows", L"Нет доступных окон"},
     {L"Window diagnostics...", L"Диагностика окон..."},
     {L"Window diagnostics", L"Диагностика окон"},
-    {L"Visible titled windows (up to 24). These checks describe window styles, not permissions.\r\n\r\n",
-     L"Видимые окна с заголовками (до 24). Проверяются свойства окон, а не права доступа.\r\n\r\n"},
+    {L"Visible titled windows (up to 24). Window styles and available process security hints, not guaranteed access.\r\n\r\n",
+     L"Видимые окна с заголовками (до 24). Свойства окон и доступные сведения о безопасности процессов, не гарантия доступа.\r\n\r\n"},
     {L"Tidy", L"Сворачивание остальных"},
     {L"Move", L"Перемещение"},
     {L"eligible by style", L"подходит по свойствам"},
@@ -168,8 +175,8 @@ inline constexpr std::array<Translation, 84> kTranslations{{
     {L"no standard title bar", L"нет стандартного заголовка"},
     {L"No eligible titled windows found.\r\n", L"Подходящие окна с заголовками не найдены.\r\n"},
     {L"More windows not shown.\r\n", L"Остальные окна не показаны.\r\n"},
-    {L"\r\nStyle checks do not prove permission to control elevated or other-user windows. Diagnostics are memory-only. Redact personal window titles before sharing.",
-     L"\r\nПроверка свойств окна не доказывает наличие прав на управление окнами другого пользователя или повышенного процесса. Диагностика хранится только в памяти. Перед отправкой скрывайте личные данные в заголовках."},
+    {L"\r\nThese read-only process-token hints do not guarantee permission for window actions. Missing access is shown as unavailable. Diagnostics are memory-only. Redact personal window titles before sharing.",
+     L"\r\nЭти сведения из токенов процессов не гарантируют права управлять окнами. Недоступные данные отображаются как не определённые. Диагностика только в памяти. Перед отправкой скрывайте личные данные в заголовках."},
     {L"Close", L"Закрыть"},
     {L"Class", L"Класс"},
     {L"Last direct minimize attempt did not minimize this window", L"Последняя попытка прямого сворачивания не сработала"},
@@ -185,8 +192,15 @@ inline constexpr std::array<Translation, 84> kTranslations{{
     {L"Clear Next monitor shortcut", L"Очистить сочетание Следующий монитор"},
     {L"Clear Previous monitor shortcut", L"Очистить сочетание Предыдущий монитор"},
     {L"Clear Minimize active shortcut", L"Очистить сочетание Свернуть активное"},
+    {L"User", L"Пользователь"},
+    {L"Integrity", L"Уровень целостности"},
+    {L"same account", L"тот же пользователь"},
+    {L"different account", L"другой пользователь"},
+    {L"not available", L"не определено"},
+    {L"higher than Window Tidy", L"выше, чем у Window Tidy"},
+    {L"not higher", L"не выше"},
 }};
-static_assert(kTranslations.size() == static_cast<std::size_t>(TextId::AccessibleClearMinimize) + 1);
+static_assert(kTranslations.size() == static_cast<std::size_t>(TextId::WindowDiagNotHigherIntegrity) + 1);
 
 constexpr const wchar_t* Text(TextId id, Language language) noexcept {
     const auto& item = kTranslations[static_cast<std::size_t>(id)];

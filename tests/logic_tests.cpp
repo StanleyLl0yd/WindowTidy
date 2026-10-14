@@ -2,6 +2,7 @@
 #include "windowtidy/hotkeys.hpp"
 #include "windowtidy/localization.hpp"
 #include "windowtidy/menu_title.hpp"
+#include "windowtidy/process_context.hpp"
 #include "windowtidy/tray_target.hpp"
 #include "windowtidy/window_diagnostics.hpp"
 #include <array>
@@ -14,6 +15,12 @@ int main() {
     assert(SafeMenuLabel(L"Notes & tasks") == L"Notes && tasks");
     assert(SafeMenuLabel(L"Title\tCtrl+K\n") == L"Title Ctrl+K ");
     assert(SafeMenuLabel(L"") == L"");
+    const auto unavailable = InspectWindowProcess(0);
+    assert(unavailable.account == AccountRelation::Unknown);
+    assert(unavailable.integrity == IntegrityRelation::Unknown);
+    const auto self = InspectWindowProcess(GetCurrentProcessId());
+    assert(self.account == AccountRelation::SameUser);
+    assert(self.integrity == IntegrityRelation::NotHigher);
     // Shared window-report redaction must not include any user-supplied title text.
     assert(DiagnosticWindowTitle(L"private@example.invalid", true, L"[hidden]") == L"[hidden]");
     assert(DiagnosticWindowTitle(L"C:\\Test\\private.txt", true, L"[hidden]") == L"[hidden]");

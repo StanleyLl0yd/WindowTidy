@@ -331,7 +331,10 @@ void ToggleTidy(HWND target) {
 
 void ToggleTopmost(HWND target) {
     if (!EligibleWindow(target)) return;
+    const auto identity = wt::CaptureWindowIdentity(target);
+    if (!wt::MatchesWindowIdentity(identity)) return;
     const bool isTopmost = (GetWindowLongPtrW(target, GWL_EXSTYLE) & WS_EX_TOPMOST) != 0;
+    if (!wt::MatchesWindowIdentity(identity)) return;
     SetWindowPos(target, isTopmost ? HWND_NOTOPMOST : HWND_TOPMOST, 0, 0, 0, 0,
                  SWP_NOMOVE | SWP_NOSIZE | SWP_NOACTIVATE | SWP_NOOWNERZORDER);
 }
@@ -339,9 +342,13 @@ void ToggleTopmost(HWND target) {
 void MinimizeWindow(HWND target) {
     g_lastMinimizeFailure = {};
     if (!EligibleWindow(target) || IsIconic(target)) return;
-    if ((GetWindowLongPtrW(target, GWL_STYLE) & WS_MINIMIZEBOX) == 0) return;
+    const auto identity = wt::CaptureWindowIdentity(target);
+    if (!identity.hwnd || (GetWindowLongPtrW(target, GWL_STYLE) & WS_MINIMIZEBOX) == 0 ||
+        !wt::MatchesWindowIdentity(identity)) return;
     ShowWindow(target, SW_MINIMIZE);
-    if (!IsIconic(target)) g_lastMinimizeFailure = wt::CaptureWindowIdentity(target);
+    if (wt::MatchesWindowIdentity(identity) && !IsIconic(target)) {
+        g_lastMinimizeFailure = identity;
+    }
 }
 
 BOOL CALLBACK EnumerateMonitors(HMONITOR handle, HDC, LPRECT, LPARAM param) {
@@ -357,8 +364,10 @@ BOOL CALLBACK EnumerateMonitors(HMONITOR handle, HDC, LPRECT, LPARAM param) {
 void MoveWindowToMonitor(HWND target, int direction) {
     g_lastMoveFailure = {};
     if (!EligibleWindow(target) || IsIconic(target)) return;
+    const auto identity = wt::CaptureWindowIdentity(target);
+    if (!identity.hwnd) return;
     const LONG_PTR style = GetWindowLongPtrW(target, GWL_STYLE);
-    if (!wt::CanMoveByStyle(style)) return;
+    if (!wt::CanMoveByStyle(style) || !wt::MatchesWindowIdentity(identity)) return;
     std::vector<Monitor> monitors;
     EnumDisplayMonitors(nullptr, nullptr, EnumerateMonitors, reinterpret_cast<LPARAM>(&monitors));
     if (monitors.size() < 2) return;
@@ -367,6 +376,7 @@ void MoveWindowToMonitor(HWND target, int direction) {
         return a.screen.top < b.screen.top;
     });
 
+    if (!wt::MatchesWindowIdentity(identity)) return;
     const HMONITOR source = MonitorFromWindow(target, MONITOR_DEFAULTTONEAREST);
     const auto it = std::find_if(monitors.begin(), monitors.end(),
                                  [source](const Monitor& m) { return m.handle == source; });
@@ -379,6 +389,7 @@ void MoveWindowToMonitor(HWND target, int direction) {
     // Restoring before GetWindowRect returns screen coordinates even for maximized windows.
     // GetWindowPlacement::rcNormalPosition is in workspace coordinates and cannot safely be mixed with monitor rects.
     if (maximized) ShowWindow(target, SW_RESTORE);
+    if (!wt::MatchesWindowIdentity(identity)) return;
     RECT current{};
     if (!GetWindowRect(target, &current) || wt::Width(current) <= 0 || wt::Height(current) <= 0) {
         if (maximized) ShowWindow(target, SW_MAXIMIZE);
@@ -395,17 +406,18 @@ void MoveWindowToMonitor(HWND target, int direction) {
         desired = wt::PreserveRelative(monitors[from].work, monitors[to].work, current);
         break;
     }
+    if (!wt::MatchesWindowIdentity(identity)) return;
     const BOOL moved = SetWindowPos(target, nullptr, desired.left, desired.top,
                                     wt::Width(desired), wt::Height(desired),
                                     SWP_NOZORDER | SWP_NOACTIVATE | SWP_NOOWNERZORDER);
     const DWORD error = moved ? ERROR_SUCCESS : GetLastError();
+    if (!wt::MatchesWindowIdentity(identity)) return;
     if (maximized || (moved && g_settings.moveMode == MoveMode::Maximize)) {
         ShowWindow(target, SW_MAXIMIZE);
     }
     if (!moved || MonitorFromWindow(target, MONITOR_DEFAULTTONEAREST) != monitors[to].handle) {
-        g_lastMoveFailure = MoveFailure{
-            wt::CaptureWindowIdentity(target), error, moved != FALSE
-        };
+        if (!wt::MatchesWindowIdentity(identity)) return;
+        g_lastMoveFailure = MoveFailure{identity, error, moved != FALSE};
     }
 }
 

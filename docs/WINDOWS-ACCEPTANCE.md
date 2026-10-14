@@ -144,6 +144,14 @@ The Window diagnostics report now asks Windows for **read-only token comparisons
 | --- | --- | --- |
 | A30 | Launch Window Tidy as a normal user; open Notepad, Task Manager, and if available an ADUC snap-in started with other credentials. Open Window diagnostics. Check only User and Integrity lines for those classes. Repeat after a failed Minimize/Move attempt; copy without titles if sharing. | Normal same-user Notepad is reported same account and not higher. Other-user/elevated windows are classified when OS permits reading their process tokens, or marked unavailable. Existing actions, window enumeration, accessibility, copy redaction, and Windows protections are unchanged. |
 
+## M1 A31: direct-action identity regression
+
+The direct Topmost, Minimize and monitor Move commands now capture the selected target's HWND/PID/thread identity and revalidate it around multi-step Win32 calls; unsuccessful action diagnostics record only the **original** matching window identity. The checks mitigate reused HWNDs after process/window closure, but cannot guarantee Win32 operation atomicity.
+
+| ID | Actions | Expected outcome |
+| --- | --- | --- |
+| A31 | With ordinary applications including Notepad, Explorer and a maximized window, exercise Topmost on/off, Minimize, Next/Previous monitor and the three move modes. Close an application before selecting its stale item from an open tray picker. | Ordinary commands still work; no action affects a newly opened unrelated window or leaves another app accidentally maximized. Diagnostic errors do not appear under a different window identity. |
+
 ## Post-test and release decision
 
 - Restore the original hotkeys, Tidy settings and exact autostart Run value, or delete test settings when using a disposable account. Exit Window Tidy.

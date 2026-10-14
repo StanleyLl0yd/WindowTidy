@@ -786,7 +786,7 @@ void AnnotateClearButtons(HWND dialog) {
     for (size_t i = 0; i < kActionCount; ++i) {
         const HWND control = GetDlgItem(dialog, clearIds[i]);
         if (control) {
-            g_settingsAccessibleNames->SetHwndPropStr(control, OBJID_CLIENT, CHILDID_SELF,
+            g_settingsAccessibleNames->SetHwndPropStr(control, static_cast<DWORD>(OBJID_CLIENT), CHILDID_SELF,
                                                        PROPID_ACC_NAME, Tr(clearNames[i]));
         }
     }
@@ -803,7 +803,7 @@ void ClearButtonAnnotations(HWND dialog) {
             if (control) {
                 MSAAPROPID property = PROPID_ACC_NAME;
                 g_settingsAccessibleNames->ClearHwndProps(
-                    control, OBJID_CLIENT, CHILDID_SELF, &property, 1);
+                    control, static_cast<DWORD>(OBJID_CLIENT), CHILDID_SELF, &property, 1);
             }
         }
         g_settingsAccessibleNames->Release();

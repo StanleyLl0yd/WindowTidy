@@ -17,6 +17,7 @@
 #include "windowtidy/hotkeys.hpp"
 #include "windowtidy/localization.hpp"
 #include "windowtidy/menu_title.hpp"
+#include "windowtidy/process_context.hpp"
 #include "windowtidy/tray_target.hpp"
 #include "windowtidy/window_diagnostics.hpp"
 #include "../res/resource.h"
@@ -551,6 +552,9 @@ BOOL CALLBACK EnumerateWindowDiagnostics(HWND window, LPARAM param) {
     const bool minimized = IsIconic(window) != FALSE;
     wchar_t className[128]{};
     const bool classKnown = GetClassNameW(window, className, static_cast<int>(std::size(className))) > 0;
+    DWORD targetPid{};
+    GetWindowThreadProcessId(window, &targetPid);
+    const auto security = wt::InspectWindowProcess(targetPid);
     const auto reason = wt::ClassifyTidyStyle(style, extended,
                           GetWindow(window, GW_OWNER) != nullptr, g_settings.skipTopmost);
     const bool attemptedAndFailed = std::any_of(g_lastTidyFailures.begin(), g_lastTidyFailures.end(),
@@ -578,6 +582,20 @@ BOOL CALLBACK EnumerateWindowDiagnostics(HWND window, LPARAM param) {
     scan.report += Tr(wt::TextId::WindowDiagClass);
     scan.report += L": ";
     scan.report += classKnown ? className : L"?";
+    scan.report += L"\r\n";
+    scan.report += Tr(wt::TextId::WindowDiagAccount);
+    scan.report += L": ";
+    scan.report += Tr(security.account == wt::AccountRelation::SameUser
+        ? wt::TextId::WindowDiagSameUser
+        : security.account == wt::AccountRelation::DifferentUser
+            ? wt::TextId::WindowDiagDifferentUser : wt::TextId::WindowDiagUnknown);
+    scan.report += L"; ";
+    scan.report += Tr(wt::TextId::WindowDiagIntegrity);
+    scan.report += L": ";
+    scan.report += Tr(security.integrity == wt::IntegrityRelation::Higher
+        ? wt::TextId::WindowDiagHigherIntegrity
+        : security.integrity == wt::IntegrityRelation::NotHigher
+            ? wt::TextId::WindowDiagNotHigherIntegrity : wt::TextId::WindowDiagUnknown);
     if (g_lastMinimizeFailure.hwnd == window &&
         wt::MatchesWindowIdentity(g_lastMinimizeFailure) && !minimized) {
         scan.report += L"\r\n";

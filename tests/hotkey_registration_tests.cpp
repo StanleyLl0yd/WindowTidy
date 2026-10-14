@@ -1,4 +1,6 @@
 #include <windows.h>
+#include <oleacc.h>
+#include <cwchar>
 #include <array>
 #include "../res/resource.h"
 #include <cstdio>
@@ -81,6 +83,40 @@ HWND WaitForSettings(DWORD pid) {
     return nullptr;
 }
 
+bool HasAccessibleClearButtonNames(HWND dialog) {
+    const HRESULT initialized = CoInitializeEx(nullptr, COINIT_APARTMENTTHREADED);
+    if (FAILED(initialized)) return false;
+    constexpr std::array<int, 5> ids{
+        IDC_CLEAR_TIDY, IDC_CLEAR_TOPMOST, IDC_CLEAR_NEXT,
+        IDC_CLEAR_PREV, IDC_CLEAR_MINIMIZE
+    };
+    bool allNamed = true;
+    for (int id : ids) {
+        const HWND button = GetDlgItem(dialog, id);
+        IAccessible* accessible{};
+        if (!button || FAILED(AccessibleObjectFromWindow(
+                button, static_cast<DWORD>(OBJID_CLIENT), __uuidof(IAccessible),
+                reinterpret_cast<void**>(&accessible))) || !accessible) {
+            allNamed = false;
+            break;
+        }
+        VARIANT self{};
+        self.vt = VT_I4;
+        self.lVal = CHILDID_SELF;
+        BSTR name{};
+        const HRESULT result = accessible->get_accName(self, &name);
+        const bool named = SUCCEEDED(result) && name != nullptr &&
+            (std::wcsstr(name, L"Clear ") == name ||
+             std::wcsstr(name, L"Очистить ") == name);
+        if (!named) std::fprintf(stderr, "Missing accessible name for clear button %d\n", id);
+        if (name) SysFreeString(name);
+        accessible->Release();
+        if (!named) { allNamed = false; break; }
+    }
+    CoUninitialize();
+    return allNamed;
+}
+
 bool RunSettingsCycle(const wchar_t* path, Shortcut expected, bool save) {
     if (!Available(expected)) {
         std::fputs("Settings test: shortcut unavailable before launch\n", stderr);
@@ -104,6 +140,7 @@ bool RunSettingsCycle(const wchar_t* path, Shortcut expected, bool save) {
                         PostMessageW(mainWindow, WM_SHOWSETTINGS, 0, 0);
     const HWND dialog = opened ? WaitForSettings(process.dwProcessId) : nullptr;
     const bool suspended = dialog && WaitForShortcut(expected, true, 5000);
+    const bool accessibleNames = dialog && HasAccessibleClearButtonNames(dialog);
     const bool commandPosted = dialog &&
         PostMessageW(dialog, WM_COMMAND, MAKEWPARAM(save ? IDOK : IDCANCEL, BN_CLICKED), 0);
     // Wait for the Save/Cancel handler to finish before checking restored bindings.
@@ -119,16 +156,17 @@ bool RunSettingsCycle(const wchar_t* path, Shortcut expected, bool save) {
     const bool restored = dialogClosed && WaitForShortcut(expected, false, 5000);
     StopChild(process);
     const bool released = WaitForShortcut(expected, true, 2000);
-    if (!(initiallyReserved && opened && dialog && suspended && commandPosted &&
-          dialogClosed && restored && released)) {
+    if (!(initiallyReserved && opened && dialog && suspended && accessibleNames &&
+          commandPosted && dialogClosed && restored && released)) {
         std::fprintf(stderr,
             "Settings %s: initiallyReserved=%d ownerPidMatches=%d opened=%d dialog=%d suspended=%d "
-            "commandPosted=%d dialogClosed=%d restored=%d released=%d\n",
+            "accessibleNames=%d commandPosted=%d dialogClosed=%d restored=%d released=%d\n",
             save ? "Save" : "Cancel", initiallyReserved, ownerPid == process.dwProcessId,
-            opened, dialog != nullptr, suspended, commandPosted, dialogClosed, restored, released);
+            opened, dialog != nullptr, suspended, accessibleNames,
+            commandPosted, dialogClosed, restored, released);
     }
-    return initiallyReserved && opened && dialog && suspended && commandPosted &&
-           dialogClosed && restored && released;
+    return initiallyReserved && opened && dialog && suspended && accessibleNames &&
+           commandPosted && dialogClosed && restored && released;
 }
 
 } // namespace

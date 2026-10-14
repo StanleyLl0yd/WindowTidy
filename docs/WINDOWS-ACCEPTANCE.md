@@ -98,6 +98,14 @@ Native Settings now uses unique translated Alt+letter mnemonics for all five hot
 | --- | --- | --- |
 | A28 | Open Settings with the keyboard. Use the displayed Alt+underlined-letter access keys on each hotkey label, both Tidy options, Move mode and autostart (use the matching input language where needed). Navigate using Tab/Shift+Tab, press Space on X to clear a hotkey, Enter to save, Esc to cancel, and repeat with a screen reader if available. | Each label focuses its adjacent hotkey control; checkboxes toggle; Move mode receives focus; saving persists, cancelling discards edits, and no conflicting mnemonics exist. Screen-reader naming of X clear buttons is separately pending and is **not** proven by CI. |
 
+### A28a: accessible clear-button names
+
+Each small X shortcut-clear button now receives an English or Russian accessible Name (for example, `Clear Tidy / Undo shortcut` or `Очистить сочетание Свернуть / вернуть`) using the Windows MSAA `IAccPropServices` service. Native integration tests query all five names while Settings is open. This test checks programmatic MSAA names but does not replace a real NVDA/Narrator keyboard-only test.
+
+| ID | Actions | Expected outcome |
+| --- | --- | --- |
+| A28a | Focus each of the five X buttons using Tab/Shift+Tab with Windows Narrator or NVDA, in Russian and English Windows UI sessions. Press Space to clear a shortcut and Cancel to discard; repeat and Save. | The screen reader identifies which shortcut is being cleared, not merely "X button"; actions remain keyboard-operable. The dialog remains stable and global hotkeys resume after close. |
+
 ## M1 A29: share diagnostics without private window titles
 
 The on-demand Window diagnostics dialog retains the normal local view, but adds **Copy without titles / Копировать без названий**. Only a direct user click invokes the Windows clipboard. The copied report retains class names, action eligibility and non-sensitive error codes, and replaces each window title with a constant placeholder. The Windows clipboard is accessible to other processes in the session; inspect the pasted report before sharing.

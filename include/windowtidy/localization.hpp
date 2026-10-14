@@ -90,10 +90,15 @@ enum class TextId {
     WindowDiagCopy,
     WindowDiagCopied,
     WindowDiagCopyFailed,
+    AccessibleClearTidy,
+    AccessibleClearTopmost,
+    AccessibleClearNext,
+    AccessibleClearPrevious,
+    AccessibleClearMinimize,
 };
 
 struct Translation { const wchar_t* english; const wchar_t* russian; };
-inline constexpr std::array<Translation, 79> kTranslations{{
+inline constexpr std::array<Translation, 84> kTranslations{{
     {L"Window Tidy Settings", L"Настройки Window Tidy"},
     {L"Global hotkeys", L"Глобальные горячие клавиши"},
     {L"&Tidy / Undo:", L"С&вернуть / вернуть:"},
@@ -175,8 +180,13 @@ inline constexpr std::array<Translation, 79> kTranslations{{
     {L"Copy without titles", L"Копировать без названий"},
     {L"Copied", L"Скопировано"},
     {L"Could not copy the report to the clipboard.", L"Не удалось скопировать отчёт в буфер обмена."},
+    {L"Clear Tidy / Undo shortcut", L"Очистить сочетание Свернуть / вернуть"},
+    {L"Clear Always on top shortcut", L"Очистить сочетание Поверх всех окон"},
+    {L"Clear Next monitor shortcut", L"Очистить сочетание Следующий монитор"},
+    {L"Clear Previous monitor shortcut", L"Очистить сочетание Предыдущий монитор"},
+    {L"Clear Minimize active shortcut", L"Очистить сочетание Свернуть активное"},
 }};
-static_assert(kTranslations.size() == static_cast<std::size_t>(TextId::WindowDiagCopyFailed) + 1);
+static_assert(kTranslations.size() == static_cast<std::size_t>(TextId::AccessibleClearMinimize) + 1);
 
 constexpr const wchar_t* Text(TextId id, Language language) noexcept {
     const auto& item = kTranslations[static_cast<std::size_t>(id)];

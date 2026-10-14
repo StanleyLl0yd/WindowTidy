@@ -2,6 +2,9 @@
 #include <shellapi.h>
 #include <commctrl.h>
 #include <dwmapi.h>
+#include <initguid.h>
+#include <oleacc.h>
+#include <objbase.h>
 
 #include <algorithm>
 #include <array>
@@ -75,6 +78,8 @@ HICON g_smallIcon{};
 NOTIFYICONDATAW g_tray{};
 bool g_trayAdded = false;
 bool g_settingsDialogOpen = false;
+IAccPropServices* g_settingsAccessibleNames{};
+bool g_settingsComInitialized = false;
 wt::WindowIdentity g_trayTarget{};
 Settings g_settings{};
 wt::Language g_language = wt::Language::English;
@@ -761,6 +766,55 @@ wt::Hotkey ReadHotkeyControl(HWND dialog, int id) {
     return {mods, LOBYTE(value)};
 }
 
+// Annotate the five visually compact X buttons without changing their layout.
+void AnnotateClearButtons(HWND dialog) {
+    const HRESULT init = CoInitializeEx(nullptr, COINIT_APARTMENTTHREADED);
+    if (FAILED(init)) return;
+    g_settingsComInitialized = true;
+    if (FAILED(CoCreateInstance(CLSID_AccPropServices, nullptr, CLSCTX_INPROC_SERVER,
+                                __uuidof(IAccPropServices),
+                                reinterpret_cast<void**>(&g_settingsAccessibleNames)))) return;
+    constexpr std::array<int, kActionCount> clearIds{{
+        IDC_CLEAR_TIDY, IDC_CLEAR_TOPMOST, IDC_CLEAR_NEXT,
+        IDC_CLEAR_PREV, IDC_CLEAR_MINIMIZE
+    }};
+    constexpr std::array<wt::TextId, kActionCount> clearNames{{
+        wt::TextId::AccessibleClearTidy, wt::TextId::AccessibleClearTopmost,
+        wt::TextId::AccessibleClearNext, wt::TextId::AccessibleClearPrevious,
+        wt::TextId::AccessibleClearMinimize
+    }};
+    for (size_t i = 0; i < kActionCount; ++i) {
+        const HWND control = GetDlgItem(dialog, clearIds[i]);
+        if (control) {
+            g_settingsAccessibleNames->SetHwndPropStr(control, static_cast<DWORD>(OBJID_CLIENT), CHILDID_SELF,
+                                                       PROPID_ACC_NAME, Tr(clearNames[i]));
+        }
+    }
+}
+
+void ClearButtonAnnotations(HWND dialog) {
+    if (g_settingsAccessibleNames) {
+        constexpr std::array<int, kActionCount> clearIds{{
+            IDC_CLEAR_TIDY, IDC_CLEAR_TOPMOST, IDC_CLEAR_NEXT,
+            IDC_CLEAR_PREV, IDC_CLEAR_MINIMIZE
+        }};
+        for (const int id : clearIds) {
+            const HWND control = GetDlgItem(dialog, id);
+            if (control) {
+                MSAAPROPID property = PROPID_ACC_NAME;
+                g_settingsAccessibleNames->ClearHwndProps(
+                    control, static_cast<DWORD>(OBJID_CLIENT), CHILDID_SELF, &property, 1);
+            }
+        }
+        g_settingsAccessibleNames->Release();
+        g_settingsAccessibleNames = nullptr;
+    }
+    if (g_settingsComInitialized) {
+        CoUninitialize();
+        g_settingsComInitialized = false;
+    }
+}
+
 INT_PTR CALLBACK SettingsProc(HWND dialog, UINT message, WPARAM wparam, LPARAM) {
     switch (message) {
     case WM_INITDIALOG: {
@@ -795,8 +849,12 @@ INT_PTR CALLBACK SettingsProc(HWND dialog, UINT message, WPARAM wparam, LPARAM) 
         for (size_t i = 0; i < kActionCount; ++i) {
             FillHotkeyControl(dialog, kHotkeyControls[i], g_settings.shortcuts[i]);
         }
+        AnnotateClearButtons(dialog);
         return TRUE;
     }
+    case WM_DESTROY:
+        ClearButtonAnnotations(dialog);
+        return FALSE;
     case WM_COMMAND: {
         const int id = LOWORD(wparam);
         constexpr std::array<int, kActionCount> clearButtons{

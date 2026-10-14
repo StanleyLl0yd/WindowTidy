@@ -21,7 +21,7 @@ cl /nologo /std:c++20 /W4 /WX /EHsc /utf-8 /DUNICODE /D_UNICODE /DWIN32_LEAN_AND
 if errorlevel 1 exit /b 1
 rc /nologo /fo "build\x64\WindowTidy.res" "res\WindowTidy.rc"
 if errorlevel 1 exit /b 1
-link /nologo /SUBSYSTEM:WINDOWS /MACHINE:X64 /DYNAMICBASE /NXCOMPAT /OPT:REF /OPT:ICF /MANIFEST:NO /OUT:"build\x64\WindowTidy.exe" "build\x64\main.obj" "build\x64\WindowTidy.res" user32.lib shell32.lib advapi32.lib comctl32.lib dwmapi.lib
+link /nologo /SUBSYSTEM:WINDOWS /MACHINE:X64 /DYNAMICBASE /NXCOMPAT /OPT:REF /OPT:ICF /MANIFEST:NO /OUT:"build\x64\WindowTidy.exe" "build\x64\main.obj" "build\x64\WindowTidy.res" user32.lib shell32.lib advapi32.lib comctl32.lib dwmapi.lib ole32.lib
 if errorlevel 1 exit /b 1
 
 if /I not "%~1"=="test" goto done
@@ -32,7 +32,7 @@ echo Running tests...
 "build\x64\logic_tests.exe"
 if errorlevel 1 exit /b 1
 echo Building hotkey integration test...
-cl /nologo /std:c++20 /W4 /WX /EHsc /utf-8 /DUNICODE /D_UNICODE /DWIN32_LEAN_AND_MEAN /DNOMINMAX /O2 /MT tests\hotkey_registration_tests.cpp /Fe:"build\x64\hotkey_registration_tests.exe" /Fo:"build\x64\hotkey_registration_tests.obj" user32.lib
+cl /nologo /std:c++20 /W4 /WX /EHsc /utf-8 /DUNICODE /D_UNICODE /DWIN32_LEAN_AND_MEAN /DNOMINMAX /O2 /MT tests\hotkey_registration_tests.cpp /Fe:"build\x64\hotkey_registration_tests.exe" /Fo:"build\x64\hotkey_registration_tests.obj" user32.lib ole32.lib oleacc.lib oleaut32.lib
 if errorlevel 1 exit /b 1
 echo Running hotkey integration test...
 "build\x64\hotkey_registration_tests.exe" "build\x64\WindowTidy.exe"

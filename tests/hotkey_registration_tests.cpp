@@ -184,7 +184,7 @@ bool WaitForIcon(const NOTIFYICONIDENTIFIER& identifier, bool present, unsigned 
 }
 
 bool RunSyntheticTrayRecovery(const wchar_t* path) {
-    std::wstring command = L"\\\"" + std::wstring(path) + L"\\\"";
+    std::wstring command = L"\"" + std::wstring(path) + L"\"";
     STARTUPINFOW startup{};
     startup.cb = sizeof(startup);
     PROCESS_INFORMATION process{};

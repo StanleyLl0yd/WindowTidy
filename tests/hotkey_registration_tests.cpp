@@ -82,7 +82,10 @@ HWND WaitForSettings(DWORD pid) {
 }
 
 bool RunSettingsCycle(const wchar_t* path, Shortcut expected, bool save) {
-    if (!Available(expected)) return false;
+    if (!Available(expected)) {
+        std::fputs("Settings test: shortcut unavailable before launch\n", stderr);
+        return false;
+    }
     std::wstring command = L"\"" + std::wstring(path) + L"\"";
     STARTUPINFOW startup{};
     startup.cb = sizeof(startup);
@@ -95,14 +98,37 @@ bool RunSettingsCycle(const wchar_t* path, Shortcut expected, bool save) {
         mainWindow = FindWindowW(L"WindowTidyWindow_38132E6B", nullptr);
         if (!mainWindow) Sleep(50);
     }
-    const bool opened = mainWindow && PostMessageW(mainWindow, WM_SHOWSETTINGS, 0, 0);
+    DWORD ownerPid{};
+    if (mainWindow) GetWindowThreadProcessId(mainWindow, &ownerPid);
+    const bool opened = ownerPid == process.dwProcessId &&
+                        PostMessageW(mainWindow, WM_SHOWSETTINGS, 0, 0);
     const HWND dialog = opened ? WaitForSettings(process.dwProcessId) : nullptr;
     const bool suspended = dialog && WaitForShortcut(expected, true, 5000);
-    if (dialog) PostMessageW(dialog, WM_COMMAND, MAKEWPARAM(save ? IDOK : IDCANCEL, BN_CLICKED), 0);
-    const bool restored = dialog && WaitForShortcut(expected, false, 5000);
+    const bool commandPosted = dialog &&
+        PostMessageW(dialog, WM_COMMAND, MAKEWPARAM(save ? IDOK : IDCANCEL, BN_CLICKED), 0);
+    // Wait for the Save/Cancel handler to finish before checking restored bindings.
+    bool dialogClosed = false;
+    if (commandPosted) {
+        for (unsigned elapsed = 0; elapsed < 5000; elapsed += 50) {
+            DialogQuery query{process.dwProcessId};
+            EnumWindows(FindSettingsDialog, reinterpret_cast<LPARAM>(&query));
+            if (!query.dialog) { dialogClosed = true; break; }
+            Sleep(50);
+        }
+    }
+    const bool restored = dialogClosed && WaitForShortcut(expected, false, 5000);
     StopChild(process);
-    const bool released = Available(expected);
-    return initiallyReserved && suspended && restored && released;
+    const bool released = WaitForShortcut(expected, true, 2000);
+    if (!(initiallyReserved && opened && dialog && suspended && commandPosted &&
+          dialogClosed && restored && released)) {
+        std::fprintf(stderr,
+            "Settings %s: initiallyReserved=%d ownerPidMatches=%d opened=%d dialog=%d suspended=%d "
+            "commandPosted=%d dialogClosed=%d restored=%d released=%d\n",
+            save ? "Save" : "Cancel", initiallyReserved, ownerPid == process.dwProcessId,
+            opened, dialog != nullptr, suspended, commandPosted, dialogClosed, restored, released);
+    }
+    return initiallyReserved && opened && dialog && suspended && commandPosted &&
+           dialogClosed && restored && released;
 }
 
 } // namespace
